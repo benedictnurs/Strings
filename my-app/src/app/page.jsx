@@ -65,9 +65,9 @@ const initialPosts = [
 ]
 
 const users = {
-  [ObjectId("user1")]: { username: "User1", name: "Alice Johnson" },
+  [ObjectId("user1")]: { username: "peterg", name: "Peter Griffin" },
   [ObjectId("user2")]: { username: "User2", name: "Bob Smith" },
-  [ObjectId("user3")]: { username: "User3", name: "Charlie Brown" },
+  [ObjectId("user3")]: { username: "cbrown", name: "Clevland Brown" },
   [ObjectId("user4")]: { username: "User4", name: "Diana Ross" }
 }
 
@@ -203,7 +203,7 @@ function PostItem({ post, posts, onViewReplies, isReply = false }) {
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
       <div className="flex items-start space-x-4">
         <Avatar>
-          <AvatarImage src={`https://i.pravatar.cc/150?img=${post._id}`} />
+          {/*<AvatarImage src={`https://i.pravatar.cc/150?img=${post._id}`} />*/}
           <AvatarFallback>
             {user.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
@@ -333,7 +333,7 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex items-center space-x-2 py-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="https://i.pravatar.cc/150?img=5" />
+            {/*<AvatarImage src="https://i.pravatar.cc/150?img=5" />*/}
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <Input
