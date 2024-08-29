@@ -131,60 +131,30 @@ export default function Component() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
-          <div className="mr-4 hidden md:flex">
-            <a className="mr-6 flex items-center space-x-2" href="#">
-              <span className="hidden font-bold sm:inline-block">Strings</span>
+          <div className="flex w-full justify-between items-center">
+            <a className="text-lg font-semibold" href="/">
+              Strings
             </a>
-            <nav className="flex items-center space-x-6 text-sm font-medium">
-              <a
-                className="transition-colors hover:text-foreground/80 text-foreground"
-                href="#"
-              >
-                Home
-              </a>
-              <a
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-                href="#"
-              >
-                Search
-              </a>
-              <a
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-                href="#"
-              >
-                Activity
-              </a>
-              <a
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-                href="#"
-              >
-                Profile
-              </a>
-            </nav>
-          </div>
-          <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <div className="w-full flex-1 md:w-auto md:flex-none">
-              <Input
-                className="md:w-[300px] lg:w-[400px]"
-                placeholder="Search..."
-                type="search"
-              />
-            </div>
-            <nav className="flex items-center">
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Heart className="h-4 w-4" />
+            <nav className="flex items-center space-x-4">
+              <Button variant="ghost" size="icon" onClick={() => setIsNewPostDialogOpen(true)}>
+                <PenSquare className="h-5 w-5" />
+                <span className="sr-only">Compose</span>
+              </Button>
+              <Button variant="ghost" size="icon">
+                <Heart className="h-5 w-5" />
                 <span className="sr-only">Activity</span>
               </Button>
               <Button variant="ghost" size="icon">
-                <User className="h-4 w-4" />
+                <User className="h-5 w-5" />
                 <span className="sr-only">Profile</span>
               </Button>
             </nav>
           </div>
         </div>
       </header>
+
       <main className="flex-1">
         <div className="container max-w-xl py-6">
           {rootPosts.map(post => (
@@ -198,15 +168,6 @@ export default function Component() {
         </div>
       </main>
       <Dialog open={isNewPostDialogOpen} onOpenChange={setIsNewPostDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            size="icon"
-            className="fixed bottom-4 right-4 h-14 w-14 rounded-full"
-          >
-            <PenSquare className="h-6 w-6" />
-            <span className="sr-only">Compose</span>
-          </Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create a new string</DialogTitle>
@@ -348,7 +309,7 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
