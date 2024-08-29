@@ -185,6 +185,33 @@ export default function Component() {
   )
 }
 
+const getRelativeTime = (date) => {
+  const now = new Date();
+  const timeDifference = (now - new Date(date)) / 1000; // Time difference in seconds
+
+  // Calculate time in different units
+  const seconds = Math.floor(timeDifference);
+  const minutes = Math.floor(timeDifference / 60);
+  const hours = Math.floor(timeDifference / 3600);
+  const days = Math.floor(timeDifference / 86400);
+  const weeks = Math.floor(timeDifference / 604800);
+
+  // Determine the relative time format
+  if (seconds < 60) {
+    return `${seconds} ${seconds === 1 ? "second" : "seconds"}`;
+  } else if (minutes < 60) {
+    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+  } else if (hours < 24) {
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  } else if (days < 7) {
+    return `${days} ${days === 1 ? "day" : "days"}`;
+  } else {
+    return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+  }
+};
+
+
+
 function PostItem({ post, posts, onViewReplies, isReply = false }) {
   const replies = posts.filter(p => p.parentId === post._id)
   const user = users[post.authorId]
@@ -213,7 +240,7 @@ function PostItem({ post, posts, onViewReplies, isReply = false }) {
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-muted-foreground">
-                {new Date(post.createdAt).toLocaleString()}
+                {getRelativeTime(post.createdAt)}
               </p>
               <Button variant="ghost" size="icon">
                 <MoreHorizontal className="h-4 w-4" />
@@ -261,6 +288,7 @@ function PostItem({ post, posts, onViewReplies, isReply = false }) {
     </div>
   )
 }
+
 // Update the ThreadPage component
 function ThreadPage({ postId, onBack, posts, addReply }) {
   const [replyContent, setReplyContent] = useState("")
@@ -281,15 +309,13 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
     }
   }
 
-  // Function to handle clicking the root post to reset to "Add a comment..."
   const handleRootPostClick = () => {
-    setReplyingTo(null) // Ensure the input shows "Add a comment..."
+    setReplyingTo(null) 
   }
 
-  // Function to render replies recursively
   const renderReplies = parentId => {
     const replies = thread.filter(post => post.parentId === parentId)
-    if (replies.length === 0) return null // No line if there are no replies
+    if (replies.length === 0) return null 
 
     return replies.map(reply => (
       <div key={reply._id} className="relative mt-4">
@@ -307,6 +333,9 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
     ))
   }
 
+  // Determine the username for placeholder
+  const replyingToUsername = replyingTo ? users[posts.find(post => post._id === replyingTo).authorId].username : ""
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -323,22 +352,21 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
           <PostItem
             post={rootPost}
             posts={posts}
-            onViewReplies={handleRootPostClick} // Reset to "Add a comment..." when clicked
+            onViewReplies={handleRootPostClick}
           />
           <div className="relative">
-            {renderReplies(rootPost._id) /* Only show line if there are replies */}
+            {renderReplies(rootPost._id)}
           </div>
         </div>
       </main>
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex items-center space-x-2 py-2">
+        <div className="container flex items-center space-x-2 py-2 w-[50%]">
           <Avatar className="h-8 w-8">
-            {/*<AvatarImage src="https://i.pravatar.cc/150?img=5" />*/}
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <Input
             className="flex-1"
-            placeholder={replyingTo ? "Add a reply..." : "Add a comment..."} // Adjusted placeholder
+            placeholder={replyingTo ? `Stringing to @${replyingToUsername}` : "Add a string..."}
             value={replyContent}
             onChange={e => setReplyContent(e.target.value)}
           />
