@@ -84,7 +84,7 @@ export default function ThreadPage({ postId, onBack, posts, addReply, users }) {
           </Avatar>
           <Input
             className="flex-1"
-            placeholder={replyingTo ? `Replying to @${replyingToUsername}` : "Add a reply..."}
+            placeholder={replyingTo ? `Stringing to @${replyingToUsername}` : "Add a string..."}
             value={replyContent}
             onChange={e => setReplyContent(e.target.value)}
           />
