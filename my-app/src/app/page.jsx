@@ -360,7 +360,7 @@ function ThreadPage({ postId, onBack, posts, addReply }) {
         </div>
       </main>
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex items-center space-x-2 py-2 w-[50%]">
+        <div className="container flex items-center space-x-2 py-2">
           <Avatar className="h-8 w-8">
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
