@@ -1,10 +1,27 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Repeat2, Send, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export default function PostItem({ post, posts, onViewReplies, users, isReply = false }) {
+export default function PostItem({
+  post,
+  posts,
+  onViewReplies,
+  users,
+  isReply = false,
+  deletePost,
+  editPost,
+  setEditingPost,
+  editingPost,
+  toggleLike,
+}) {
   const replies = posts.filter(p => p.parentId === post._id);
   const user = users[post.authorId];
 
@@ -42,22 +59,50 @@ export default function PostItem({ post, posts, onViewReplies, users, isReply = 
               <p className="text-sm text-muted-foreground">
                 {getRelativeTime(post.createdAt)}
               </p>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">More</span>
-              </Button>
+              <div className="flex items-center space-x-2">
+                {post.authorId === "tester" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingPost(post)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => deletePost(post._id)}>
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
             {user ? `@${user.username.toLowerCase()}` : "@tester"}
           </p>
-          <div className="text-sm">
-            <p className="whitespace-pre-wrap break-words overflow-hidden text-ellipsis">
-              {post.content}
-            </p>
-          </div>
+          {editingPost && editingPost._id === post._id ? (
+            <div className="space-y-2">
+              <textarea
+                value={editingPost.content}
+                onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                className="mt-2 min-h-[100px] w-full border p-2 bg-zinc-950"
+              />
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditingPost(null)}>Cancel</Button>
+                <Button onClick={() => editPost(post._id, editingPost.content)} className="text-primary-foreground hover:bg-primary/90 bg-primary">Save</Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm">{post.content}</p>
+          )}
           <div className="flex items-center space-x-4 pt-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => toggleLike(post._id)}>
               <Heart className="h-4 w-4" />
               <span className="sr-only">Like</span>
             </Button>

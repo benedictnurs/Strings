@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addReply as addReplyAction } from '@/lib/features/posts/postsSlice';
+import { addReply as addReplyAction, deletePost as deletePostAction, editPost as editPostAction } from '@/lib/features/posts/postsSlice';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -18,20 +18,30 @@ export default function ThreadPage({ params }) {
     const [newPostContent, setNewPostContent] = useState("");
     const [replyContent, setReplyContent] = useState('');
     const [replyingTo, setReplyingTo] = useState(null);
+    const [editingPost, setEditingPost] = useState(null);
 
-    const thread = (posts || []).filter(post => post.threadId === postId || post._id === postId);
+    const thread = posts.filter(post => post.threadId === postId || post._id === postId);
     const rootPost = thread.find(post => post._id === postId);
 
     if (!rootPost) {
         return <div>Post Not Found</div>;
     }
+    
+    const handleEditPost = (postId, newContent) => {
+        dispatch(editPostAction({ postId, newContent }));
+        setEditingPost(null);
+    };
+
+    const handleDeletePost = (postId) => {
+        dispatch(deletePostAction(postId));
+    };
 
     const handleAddReply = () => {
         if (replyContent.trim()) {
             const newReply = {
                 _id: String(posts.length + 1),
                 content: replyContent,
-                authorId: "1",
+                authorId: "tester",
                 parentId: replyingTo || postId,
                 threadId: rootPost.threadId,
                 createdAt: new Date().toISOString(),
@@ -46,7 +56,7 @@ export default function ThreadPage({ params }) {
         setReplyingTo(null);
     };
 
-    const renderReplies = parentId => {
+    const renderReplies = (parentId) => {
         const replies = thread.filter(post => post.parentId === parentId);
         if (replies.length === 0) return null;
 
@@ -59,6 +69,10 @@ export default function ThreadPage({ params }) {
                         posts={posts}
                         onViewReplies={() => setReplyingTo(reply._id)}
                         users={users}
+                        deletePost={handleDeletePost}
+                        editPost={handleEditPost}
+                        setEditingPost={setEditingPost}
+                        editingPost={editingPost}
                         isReply
                     />
                     {renderReplies(reply._id)}
@@ -80,7 +94,7 @@ export default function ThreadPage({ params }) {
                 onOpenChange={setNewPostDialogOpen}
                 newPostContent={newPostContent}
                 setNewPostContent={setNewPostContent}
-                addNewPost={() => {}}
+                addNewPost={() => { }}
             />
 
             <main className="flex-1">
@@ -90,6 +104,9 @@ export default function ThreadPage({ params }) {
                         posts={posts}
                         onViewReplies={handleRootPostClick}
                         users={users}
+                        deletePost={handleDeletePost}
+                        editPost={handleEditPost}
+                        setEditingPost={setEditingPost}
                     />
                     <div className="relative">
                         {renderReplies(rootPost._id)}

@@ -1,4 +1,3 @@
-// src/lib/features/posts/postsSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const postsSlice = createSlice({
@@ -12,9 +11,10 @@ const postsSlice = createSlice({
       state.push(action.payload);
     },
     updatePost(state, action) {
-      const index = state.findIndex(post => post._id === action.payload._id);
-      if (index >= 0) {
-        state[index] = action.payload;
+      const { postId, newContent } = action.payload;
+      const post = state.find(post => post._id === postId);
+      if (post) {
+        post.content = newContent;
       }
     },
     deletePost(state, action) {
@@ -23,8 +23,15 @@ const postsSlice = createSlice({
     addReply(state, action) {
       state.push(action.payload); // Add the reply to the posts list
     },
+    editPost(state, action) {
+      const { postId, newContent } = action.payload;
+      const post = state.find(post => post._id === postId);
+      if (post) {
+        post.content = newContent;
+      }
+    }
   },
 });
 
-export const { setPosts, addPost, updatePost, deletePost, addReply } = postsSlice.actions;
+export const { setPosts, addPost, updatePost, deletePost, addReply, editPost } = postsSlice.actions;
 export default postsSlice.reducer;

@@ -1,7 +1,8 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setPosts, addPost } from '../lib/features/posts/postsSlice';
+import { setPosts, addPost, deletePost, editPost, toggleLike } from '../lib/features/posts/postsSlice';
 import { setUsers } from '../lib/features/users/usersSlice';
 import Header from "@/components/Header";
 import PostItem from "@/components/PostItem";
@@ -57,6 +58,7 @@ export default function HomePage() {
   const users = useSelector(state => state.users);
   const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [editingPost, setEditingPost] = useState(null);
 
   useEffect(() => {
     dispatch(setPosts(initialPosts));
@@ -71,9 +73,23 @@ export default function HomePage() {
       createdAt: new Date().toISOString(),
       threadId: String(posts.length + 1),
       parentId: null,
+      likes: [],
     };
     dispatch(addPost(newPost));
     setNewPostDialogOpen(false);
+  };
+
+  const handleEditPost = (postId, newContent) => {
+    dispatch(editPost({ postId, newContent }));
+    setEditingPost(null);
+  };
+
+  const handleDeletePost = postId => {
+    dispatch(deletePost(postId));
+  };
+
+  const handleToggleLike = postId => {
+    dispatch(toggleLike(postId));
   };
 
   const handleViewReplies = postId => {
@@ -91,6 +107,7 @@ export default function HomePage() {
       />
       <main>
         <div className="container max-w-xl py-6">
+          
           {posts
             .filter(post => !post.parentId)
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort posts by createdAt in descending order
@@ -101,6 +118,12 @@ export default function HomePage() {
                 posts={posts}
                 onViewReplies={handleViewReplies}
                 users={users}
+                isReply={false}
+                deletePost={handleDeletePost}
+                editPost={handleEditPost}
+                setEditingPost={setEditingPost}
+                editingPost={editingPost}
+                toggleLike={handleToggleLike}
               />
             ))}
         </div>
