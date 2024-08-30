@@ -12,11 +12,12 @@ import { useRouter } from 'next/navigation';
 const initialPosts = [
   {
     _id: ObjectId("1"),
-    content: "This is the original post.",
+    content: "Wowah this thing works!",
     authorId: ObjectId("user1"),
     parentId: null,
     threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:00:00Z"
+    createdAt: "2024-08-28T00:00:00Z",
+    likes: []
   },
   {
     _id: ObjectId("2"),
@@ -24,7 +25,8 @@ const initialPosts = [
     authorId: ObjectId("user2"),
     parentId: ObjectId("1"),
     threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:05:00Z"
+    createdAt: "2024-08-28T00:05:00Z",
+    likes: []
   },
   {
     _id: ObjectId("3"),
@@ -32,7 +34,8 @@ const initialPosts = [
     authorId: ObjectId("user3"),
     parentId: ObjectId("2"),
     threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:10:00Z"
+    createdAt: "2024-08-28T00:10:00Z",
+    likes: []
   },
   {
     _id: ObjectId("4"),
@@ -40,7 +43,17 @@ const initialPosts = [
     authorId: ObjectId("user4"),
     parentId: null,
     threadId: ObjectId("4"),
-    createdAt: "2024-08-28T01:00:00Z"
+    createdAt: "2024-08-28T01:00:00Z",
+    likes: ["user1"]
+  },
+  {
+    _id: ObjectId("5"),
+    content: "TO-DO add Login, add Database and add USERS!!!.",
+    authorId: ObjectId("user5"),
+    parentId: null,
+    threadId: ObjectId("5"),
+    createdAt: "2024-08-29T01:00:00Z",
+    likes: ["user1", "user2", "user3","tester"]
   }
 ];
 
@@ -48,7 +61,9 @@ const initialUsers = {
   [ObjectId("user1")]: { username: "peterg", name: "Peter Griffin" },
   [ObjectId("user2")]: { username: "stewie0921", name: "Stewie" },
   [ObjectId("user3")]: { username: "cbrown", name: "Clevland Brown" },
-  [ObjectId("user4")]: { username: "Johndoe", name: "JD" }
+  [ObjectId("user4")]: { username: "BrianG", name: "Brian G." },
+  [ObjectId("user5")]: { username: "bn", name: "Ben N" }
+
 };
 
 export default function HomePage() {
@@ -60,6 +75,9 @@ export default function HomePage() {
   const [newPostContent, setNewPostContent] = useState("");
   const [editingPost, setEditingPost] = useState(null);
 
+  // Define the currentUserId
+  const currentUserId = 'tester'; // Replace with actual current user ID if available
+
   useEffect(() => {
     dispatch(setPosts(initialPosts));
     dispatch(setUsers(initialUsers));
@@ -68,7 +86,7 @@ export default function HomePage() {
   const handleSubmitNewPost = content => {
     const newPost = {
       _id: String(posts.length + 1),
-      authorId: 'tester',
+      authorId: currentUserId, // Use currentUserId for the new post
       content,
       createdAt: new Date().toISOString(),
       threadId: String(posts.length + 1),
@@ -107,10 +125,9 @@ export default function HomePage() {
       />
       <main>
         <div className="container max-w-xl py-6">
-          
           {posts
             .filter(post => !post.parentId)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort posts by createdAt in descending order
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
             .map(post => (
               <PostItem
                 key={post._id}
@@ -124,6 +141,7 @@ export default function HomePage() {
                 setEditingPost={setEditingPost}
                 editingPost={editingPost}
                 toggleLike={handleToggleLike}
+                currentUserId={currentUserId} // Pass currentUserId here
               />
             ))}
         </div>

@@ -21,6 +21,7 @@ export default function PostItem({
   setEditingPost,
   editingPost,
   toggleLike,
+  currentUserId, // Add this prop
 }) {
   const replies = posts.filter(p => p.parentId === post._id);
   const user = users[post.authorId];
@@ -41,6 +42,7 @@ export default function PostItem({
   };
 
   const totalReplies = getTotalReplies(post._id);
+  const isLikedByCurrentUser = post.likes.includes(currentUserId); // Check if post is liked by the current user
 
   return (
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
@@ -101,18 +103,25 @@ export default function PostItem({
           ) : (
             <p className="text-sm">{post.content}</p>
           )}
-          <div className="flex items-center space-x-4 pt-2">
-            <Button variant="ghost" size="icon" onClick={() => toggleLike(post._id)}>
-              <Heart className="h-4 w-4" />
+          <div className="flex items-center space-x-3 pt-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => toggleLike(post._id)}
+              className={isLikedByCurrentUser ? "text-red-500" : ""}
+            >
+              <Heart 
+                className="h-4 w-4" 
+                fill={isLikedByCurrentUser ? "currentColor" : "none"} 
+              />
               <span className="sr-only">Like</span>
             </Button>
+            {post.likes.length >= 0 && (
+              <span className="text-sm text-muted-foreground">{post.likes.length}</span>
+            )}
             <Button variant="ghost" size="icon" onClick={() => onViewReplies(post._id)}>
               <MessageCircle className="h-4 w-4" />
               <span className="sr-only">Comment</span>
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Repeat2 className="h-4 w-4" />
-              <span className="sr-only">Repost</span>
             </Button>
             <Button variant="ghost" size="icon">
               <Send className="h-4 w-4" />

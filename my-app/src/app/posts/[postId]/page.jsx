@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addReply as addReplyAction, deletePost as deletePostAction, editPost as editPostAction } from '@/lib/features/posts/postsSlice';
+import { addReply as addReplyAction, deletePost as deletePostAction, editPost as editPostAction, toggleLike as toggleLikeAction } from '@/lib/features/posts/postsSlice';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -20,13 +20,16 @@ export default function ThreadPage({ params }) {
     const [replyingTo, setReplyingTo] = useState(null);
     const [editingPost, setEditingPost] = useState(null);
 
+    // Define the currentUserId
+    const currentUserId = 'tester'; // Replace with actual current user ID if available
+
     const thread = posts.filter(post => post.threadId === postId || post._id === postId);
     const rootPost = thread.find(post => post._id === postId);
 
     if (!rootPost) {
         return <div>Post Not Found</div>;
     }
-    
+
     const handleEditPost = (postId, newContent) => {
         dispatch(editPostAction({ postId, newContent }));
         setEditingPost(null);
@@ -41,15 +44,20 @@ export default function ThreadPage({ params }) {
             const newReply = {
                 _id: String(posts.length + 1),
                 content: replyContent,
-                authorId: "tester",
+                authorId: currentUserId,
                 parentId: replyingTo || postId,
                 threadId: rootPost.threadId,
                 createdAt: new Date().toISOString(),
+                likes: []
             };
             dispatch(addReplyAction(newReply));
             setReplyContent('');
             setReplyingTo(null);
         }
+    };
+
+    const handleToggleLike = (postId) => {
+        dispatch(toggleLikeAction(postId));
     };
 
     const handleRootPostClick = () => {
@@ -74,6 +82,8 @@ export default function ThreadPage({ params }) {
                         setEditingPost={setEditingPost}
                         editingPost={editingPost}
                         isReply
+                        toggleLike={handleToggleLike}
+                        currentUserId={currentUserId}
                     />
                     {renderReplies(reply._id)}
                 </div>
@@ -107,6 +117,8 @@ export default function ThreadPage({ params }) {
                         deletePost={handleDeletePost}
                         editPost={handleEditPost}
                         setEditingPost={setEditingPost}
+                        toggleLike={handleToggleLike}
+                        currentUserId={currentUserId}
                     />
                     <div className="relative">
                         {renderReplies(rootPost._id)}
