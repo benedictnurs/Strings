@@ -1,4 +1,3 @@
-// src/pages/index.js
 'use client';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,10 +5,8 @@ import { setPosts, addPost } from '../lib/features/posts/postsSlice';
 import { setUsers } from '../lib/features/users/usersSlice';
 import Header from "@/components/Header";
 import PostItem from "@/components/PostItem";
-import ThreadPage from "@/components/ThreadPage";
 import { ObjectId } from "@/utils/objectId";
 import { useRouter } from 'next/navigation';
-
 
 const initialPosts = [
   {
@@ -60,17 +57,11 @@ export default function HomePage() {
   const users = useSelector(state => state.users);
   const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
-  const [currentThread, setCurrentThread] = useState(null);
-  const [replyContent, setReplyContent] = useState("");
-  const [replyingTo, setReplyingTo] = useState(null);
 
   useEffect(() => {
     dispatch(setPosts(initialPosts));
     dispatch(setUsers(initialUsers));
   }, [dispatch]);
-
-  const handleOpenNewPostDialog = () => setNewPostDialogOpen(true);
-  const handleCloseNewPostDialog = () => setNewPostDialogOpen(false);
 
   const handleSubmitNewPost = content => {
     const newPost = {
@@ -82,38 +73,12 @@ export default function HomePage() {
       parentId: null,
     };
     dispatch(addPost(newPost));
-    handleCloseNewPostDialog();
-  };
-
-  const findThreadId = (parentId) => {
-    const parentPost = posts.find(post => post._id === parentId);
-    return parentPost ? parentPost.threadId : parentId;
-  };
-
-  const handleAddReply = (parentId, content) => {
-    const newReply = {
-      _id: String(posts.length + 1),
-      content,
-      authorId: "1",
-      parentId,
-      threadId: findThreadId(parentId),
-      createdAt: new Date().toISOString(),
-    };
-
-    dispatch(addPost(newReply));
+    setNewPostDialogOpen(false);
   };
 
   const handleViewReplies = postId => {
     router.push(`/posts/${postId}`);
-    setCurrentThread(postId);
   };
-
-  const handleBack = () => {
-    router.back();
-    setCurrentThread(null);
-  };
-
-  const handleReplyChange = e => setReplyContent(e.target.value);
 
   return (
     <>
@@ -125,29 +90,20 @@ export default function HomePage() {
         addNewPost={handleSubmitNewPost}
       />
       <main>
-        {currentThread ? (
-          <ThreadPage
-            params={{ postId: currentThread }}
-            posts={posts}
-            addReply={handleAddReply}
-            users={users}
-            onBack={handleBack}
-          />
-        ) : (
-          <div className="container max-w-xl py-6">
-            {posts
-              .filter(post => !post.parentId)
-              .map(post => (
-                <PostItem
-                  key={post._id}
-                  post={post}
-                  posts={posts}
-                  onViewReplies={handleViewReplies}
-                  users={users}
-                />
-              ))}
-          </div>
-        )}
+        <div className="container max-w-xl py-6">
+          {posts
+            .filter(post => !post.parentId)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort posts by createdAt in descending order
+            .map(post => (
+              <PostItem
+                key={post._id}
+                post={post}
+                posts={posts}
+                onViewReplies={handleViewReplies}
+                users={users}
+              />
+            ))}
+        </div>
       </main>
     </>
   );

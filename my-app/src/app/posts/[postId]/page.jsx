@@ -1,23 +1,21 @@
 'use client';
-// src/app/posts/[postId]/page.jsx
-import { useRouter } from 'next/navigation';
+
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { addReply as addReplyAction } from '@/lib/features/posts/postsSlice';
-import { useState } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import PostItem from '@/components/PostItem';
-import { PenSquare, Heart, User } from "lucide-react";
+import Header from '@/components/Header';
 
 export default function ThreadPage({ params }) {
-    const router = useRouter();
     const { postId } = params;
     const posts = useSelector(state => state.posts);
     const users = useSelector(state => state.users);
     const dispatch = useDispatch();
-
+    const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
+    const [newPostContent, setNewPostContent] = useState("");
     const [replyContent, setReplyContent] = useState('');
     const [replyingTo, setReplyingTo] = useState(null);
 
@@ -31,19 +29,18 @@ export default function ThreadPage({ params }) {
     const handleAddReply = () => {
         if (replyContent.trim()) {
             const newReply = {
-                _id: String(posts.length + 1), // Generate a new ID
+                _id: String(posts.length + 1),
                 content: replyContent,
-                authorId: "1", // Replace with actual authorId
+                authorId: "1",
                 parentId: replyingTo || postId,
                 threadId: rootPost.threadId,
                 createdAt: new Date().toISOString(),
             };
-            dispatch(addReplyAction(newReply)); // Dispatch action to add reply
+            dispatch(addReplyAction(newReply));
             setReplyContent('');
             setReplyingTo(null);
         }
     };
-
 
     const handleRootPostClick = () => {
         setReplyingTo(null);
@@ -76,33 +73,16 @@ export default function ThreadPage({ params }) {
 
     return (
         <div className="flex flex-col min-h-screen bg-background">
-            <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 items-center">
-                    <div className="flex w-full justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                            <Button variant="ghost" onClick={() => router.back()}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back
-                            </Button>
-                            <h1 className="text-lg font-semibold">
-                                &#123;String&#125;
-                            </h1>
-                        </div>
-                        <nav className="flex items-center space-x-4">
-                            <Button variant="ghost" size="icon">
-                                <Heart className="h-5 w-5" />
-                                <span className="sr-only">Activity</span>
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                                <User className="h-5 w-5" />
-                                <span className="sr-only">Profile</span>
-                            </Button>
-                        </nav>
-                    </div>
-                </div>
-            </header>
+            <Header
+                showBackButton={true}
+                showComposeButton={false}
+                open={newPostDialogOpen}
+                onOpenChange={setNewPostDialogOpen}
+                newPostContent={newPostContent}
+                setNewPostContent={setNewPostContent}
+                addNewPost={() => {}}
+            />
 
-            
             <main className="flex-1">
                 <div className="container max-w-xl py-6">
                     <PostItem
@@ -139,4 +119,3 @@ export default function ThreadPage({ params }) {
         </div>
     );
 }
-
