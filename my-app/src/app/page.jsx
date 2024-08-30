@@ -1,10 +1,15 @@
-'use client'
 // src/pages/index.js
-import { useState, useEffect } from "react";
+'use client';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { setPosts, addPost } from '../lib/features/posts/postsSlice';
+import { setUsers } from '../lib/features/users/usersSlice';
 import Header from "@/components/Header";
 import PostItem from "@/components/PostItem";
 import ThreadPage from "@/components/ThreadPage";
 import { ObjectId } from "@/utils/objectId";
+import { useRouter } from 'next/navigation';
+
 
 const initialPosts = [
   {
@@ -43,61 +48,70 @@ const initialPosts = [
 
 const initialUsers = {
   [ObjectId("user1")]: { username: "peterg", name: "Peter Griffin" },
-  [ObjectId("user2")]: { username: "stewie0921  ", name: "Stewie" },
+  [ObjectId("user2")]: { username: "stewie0921", name: "Stewie" },
   [ObjectId("user3")]: { username: "cbrown", name: "Clevland Brown" },
   [ObjectId("user4")]: { username: "Johndoe", name: "JD" }
 };
 
 export default function HomePage() {
-  const [posts, setPosts] = useState(initialPosts);
-  const [users, setUsers] = useState(initialUsers);
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const posts = useSelector(state => state.posts);
+  const users = useSelector(state => state.users);
   const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
-  const [newPostContent, setNewPostContent] = useState(""); // State for new post content
+  const [newPostContent, setNewPostContent] = useState("");
   const [currentThread, setCurrentThread] = useState(null);
   const [replyContent, setReplyContent] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
 
   useEffect(() => {
-    // Fetch posts and users from an API or some source if needed
-  }, []);
+    dispatch(setPosts(initialPosts));
+    dispatch(setUsers(initialUsers));
+  }, [dispatch]);
 
   const handleOpenNewPostDialog = () => setNewPostDialogOpen(true);
   const handleCloseNewPostDialog = () => setNewPostDialogOpen(false);
 
   const handleSubmitNewPost = content => {
-    // Logic to add a new post to state
     const newPost = {
       _id: String(posts.length + 1),
-      authorId: 'tester', // Example authorId
+      authorId: 'tester',
       content,
       createdAt: new Date().toISOString(),
       threadId: String(posts.length + 1),
       parentId: null,
     };
-    setPosts([newPost, ...posts]);
-    handleCloseNewPostDialog(); // Close the dialog after submission
+    dispatch(addPost(newPost));
+    handleCloseNewPostDialog();
   };
 
   const findThreadId = (parentId) => {
     const parentPost = posts.find(post => post._id === parentId);
-    return parentPost ? parentPost.threadId : parentId; // Return the parentId if no threadId is found
+    return parentPost ? parentPost.threadId : parentId;
   };
 
   const handleAddReply = (parentId, content) => {
     const newReply = {
       _id: String(posts.length + 1),
       content,
-      authorId: "1", // Example authorId (replace with dynamic logic)
+      authorId: "1",
       parentId,
       threadId: findThreadId(parentId),
       createdAt: new Date().toISOString(),
     };
 
-    setPosts(prevPosts => [newReply, ...prevPosts]);
+    dispatch(addPost(newReply));
   };
 
-  const handleViewReplies = postId => setCurrentThread(postId);
-  const handleBack = () => setCurrentThread(null);
+  const handleViewReplies = postId => {
+    router.push(`/posts/${postId}`);
+    setCurrentThread(postId);
+  };
+
+  const handleBack = () => {
+    router.back();
+    setCurrentThread(null);
+  };
 
   const handleReplyChange = e => setReplyContent(e.target.value);
 
@@ -113,11 +127,11 @@ export default function HomePage() {
       <main>
         {currentThread ? (
           <ThreadPage
-            postId={currentThread}
-            onBack={handleBack}
+            params={{ postId: currentThread }}
             posts={posts}
             addReply={handleAddReply}
             users={users}
+            onBack={handleBack}
           />
         ) : (
           <div className="container max-w-xl py-6">

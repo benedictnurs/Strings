@@ -13,7 +13,7 @@ export default function ThreadPage({ postId, onBack, posts, addReply, users }) {
   const rootPost = thread.find(post => post._id === postId);
   
   if (!rootPost) {
-    return <div>Post not found</div>;
+    return <div></div>;
   }
 
   const handleAddReply = () => {
@@ -79,9 +79,6 @@ export default function ThreadPage({ postId, onBack, posts, addReply, users }) {
       </main>
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex items-center space-x-2 py-2">
-          <Avatar>
-            <AvatarFallback>TS</AvatarFallback>
-          </Avatar>
           <Input
             className="flex-1"
             placeholder={replyingTo ? `Stringing to @${replyingToUsername}` : "Add a string..."}

@@ -1,24 +1,24 @@
-import React from "react";
-import "./globals.css";
-import { Inter } from "next/font/google";
+import './globals.css';
+import { Inter } from 'next/font/google';
+import StoreProvider from './StoreProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
-const metadata = {
+export const metadata = {
   title: "Strings",
   description: "Connect with Strings!",
 };
 
-function RootLayout({ children }) {
+export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
-        <title>{metadata.title}</title>
-        <meta name="description" content={metadata.description} />
-      </head>
-      <body className={inter.className}>{children}</body>
-    </html>
+    <StoreProvider>
+      <html lang="en">
+        <head>
+          <title>{metadata.title}</title>
+          <meta name="description" content={metadata.description} />
+        </head>
+        <body className={inter.className}>{children}</body>
+      </html>
+    </StoreProvider>
   );
 }
-
-export default RootLayout;
