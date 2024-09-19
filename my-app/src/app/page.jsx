@@ -85,7 +85,7 @@ export default function HomePage() {
   const handleSubmitNewPost = content => {
     const newPost = {
       _id: String(posts.length + 1),
-      authorId: user?.id || "guest", // Use Clerk's user ID or "guest" if not signed in
+      authorId: user?.id || "tester", // Use Clerk's user ID or "guest" if not signed in
       content,
       createdAt: new Date().toISOString(),
       threadId: String(posts.length + 1),
