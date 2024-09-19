@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Repeat2, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUser } from '@clerk/clerk-react';
 
 export default function PostItem({
   post,
@@ -21,10 +22,11 @@ export default function PostItem({
   setEditingPost,
   editingPost,
   toggleLike,
-  currentUserId, // Add this prop
 }) {
   const replies = posts.filter(p => p.parentId === post._id);
   const user = users[post.authorId];
+  
+  const { user: currentUser } = useUser(); // Get current user from Clerk
 
   // Debugging logs
   useEffect(() => {
@@ -42,7 +44,9 @@ export default function PostItem({
   };
 
   const totalReplies = getTotalReplies(post._id);
+  const currentUserId = currentUser?.id || "tester"; // Default to "tester" if no user ID found
   const isLikedByCurrentUser = post.likes.includes(currentUserId); // Check if post is liked by the current user
+  const isAuthor = currentUserId === post.authorId; // Check if the current user is the author of the post
 
   return (
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
@@ -55,14 +59,14 @@ export default function PostItem({
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium leading-none">
-              {user ? user.name : "Test User"}
+              {user ? user.name : currentUser?.fullName || "Guest"}
             </p>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-muted-foreground">
                 {getRelativeTime(post.createdAt)}
               </p>
               <div className="flex items-center space-x-2">
-                {post.authorId === "tester" && (
+                {isAuthor && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -86,7 +90,7 @@ export default function PostItem({
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {user ? `@${user.username.toLowerCase()}` : "@tester"}
+            {user ? `@${user.username.toLowerCase()}` : `@${currentUser?.username || "Guest (Sign In)"}`}
           </p>
           {editingPost && editingPost._id === post._id ? (
             <div className="space-y-2">

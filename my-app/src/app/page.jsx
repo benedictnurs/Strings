@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import PostItem from "@/components/PostItem";
 import { ObjectId } from "@/utils/objectId";
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/clerk-react'; // Import the useUser hook from Clerk
 
 const initialPosts = [
   {
@@ -53,7 +54,7 @@ const initialPosts = [
     parentId: null,
     threadId: ObjectId("5"),
     createdAt: "2024-08-29T01:00:00Z",
-    likes: ["user1", "user2", "user3","tester"]
+    likes: ["user1", "user2", "user3"]
   }
 ];
 
@@ -63,7 +64,6 @@ const initialUsers = {
   [ObjectId("user3")]: { username: "cbrown", name: "Clevland Brown" },
   [ObjectId("user4")]: { username: "BrianG", name: "Brian G." },
   [ObjectId("user5")]: { username: "bn", name: "Ben N" }
-
 };
 
 export default function HomePage() {
@@ -75,8 +75,7 @@ export default function HomePage() {
   const [newPostContent, setNewPostContent] = useState("");
   const [editingPost, setEditingPost] = useState(null);
 
-  // Define the currentUserId
-  const currentUserId = 'tester'; // Replace with actual current user ID if available
+  const { user, isSignedIn } = useUser(); // Get user data from Clerk
 
   useEffect(() => {
     dispatch(setPosts(initialPosts));
@@ -86,7 +85,7 @@ export default function HomePage() {
   const handleSubmitNewPost = content => {
     const newPost = {
       _id: String(posts.length + 1),
-      authorId: currentUserId, // Use currentUserId for the new post
+      authorId: user?.id || "guest", // Use Clerk's user ID or "guest" if not signed in
       content,
       createdAt: new Date().toISOString(),
       threadId: String(posts.length + 1),
@@ -107,7 +106,7 @@ export default function HomePage() {
   };
 
   const handleToggleLike = postId => {
-    dispatch(toggleLike(postId));
+    dispatch(toggleLike({ postId, userId: user?.id || "tester" })); // Pass userId or "guest"
   };
 
   const handleViewReplies = postId => {
@@ -141,7 +140,7 @@ export default function HomePage() {
                 setEditingPost={setEditingPost}
                 editingPost={editingPost}
                 toggleLike={handleToggleLike}
-                currentUserId={currentUserId} // Pass currentUserId here
+                currentUserId={user?.id || 'guest'} // Pass currentUserId from Clerk or 'guest'
               />
             ))}
         </div>

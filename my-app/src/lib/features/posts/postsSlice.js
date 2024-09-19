@@ -42,16 +42,16 @@ const postsSlice = createSlice({
     },
     // Toggle the like status of a post
     toggleLike(state, action) {
-      const postId = action.payload;
+      const { postId, userId } = action.payload;
       const post = state.find(post => post._id === postId);
       if (post) {
-        const userIndex = post.likes.indexOf("tester"); // Replace "tester" with the actual current user ID
+        const userIndex = post.likes.indexOf(userId || "tester");
         if (userIndex >= 0) {
           // If the user has already liked the post, unlike it
           post.likes.splice(userIndex, 1);
         } else {
           // If the user has not liked the post, like it
-          post.likes.push("tester"); // Replace "tester" with the actual current user ID
+          post.likes.push(userId || "tester");
         }
       }
     },
