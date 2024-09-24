@@ -35,7 +35,7 @@ const initialPosts = [
     authorId: ObjectId("user3"),
     parentId: ObjectId("2"),
     threadId: ObjectId("1"),
-    createdAt: "2024-09-22T00:10:00Z",
+    createdAt: "2024-08-28T00:10:00Z",
     likes: []
   },
   {
