@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  MoreHorizontal,
+  Trash,
+  Edit,
+} from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
 import {
   DropdownMenu,
@@ -9,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from "@clerk/clerk-react";
 
 export default function PostItem({
   post,
@@ -23,13 +30,15 @@ export default function PostItem({
   editingPost,
   toggleLike,
 }) {
-  const replies = posts.filter(p => p.parentId === post._id);
+  const replies = posts.filter((p) => p.parentId === post._id);
   const user = users[post.authorId];
 
-  const { user: currentUser } = useUser(); // Get current user from Clerk
+  const { user, isSignedIn } = useUser(); // From Clerk
+  const isGuest = !isSignedIn; // If not signed in, treat as a guest
+  
 
-  const getTotalReplies = postId => {
-    const directReplies = posts.filter(p => p.parentId === postId);
+  const getTotalReplies = (postId) => {
+    const directReplies = posts.filter((p) => p.parentId === postId);
     return directReplies.reduce(
       (total, reply) => total + getTotalReplies(reply._id),
       directReplies.length
@@ -41,9 +50,77 @@ export default function PostItem({
   const isLikedByCurrentUser = post.likes.includes(currentUserId);
   const isAuthor = currentUserId === (post.authorId || "tester");
 
+  const handleEditPost = async (postId, newContent) => {
+    try {
+      const response = await fetch("/api/posts/edit", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId, content: newContent }),
+      });
+
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setEditingPost(null);
+
+        // Update the Redux store
+        editPost(postId, newContent); // Call the prop function to update the post in the store
+      } else {
+        console.error("Failed to update post:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error updating post:", error);
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      const response = await fetch("/api/posts/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId }),
+      });
+
+      if (response.ok) {
+        // Update the Redux store
+        deletePost(postId); // Call the prop function to remove the post from the store
+      } else {
+        console.error("Failed to delete post:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
+
+  const handleToggleLike = async (postId) => {
+    const userId = currentUserId; // Use the current user ID
+
+    try {
+      const response = await fetch("/api/posts/like", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId, userId }),
+      });
+
+      if (response.ok) {
+        const updatedPost = await response.json();
+        // Update the Redux store
+        toggleLike(postId, userId);
+      } else {
+        console.error("Failed to toggle like:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
   return (
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
-      {currentUserId}
       <div className="flex items-start space-x-4">
         <Avatar>
           {(user && user.profilePicture) || currentUser?.profileImageUrl ? (
@@ -82,7 +159,9 @@ export default function PostItem({
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => deletePost(post._id)}>
+                      <DropdownMenuItem
+                        onClick={() => handleDeletePost(post._id)}
+                      >
                         <Trash className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -111,7 +190,7 @@ export default function PostItem({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => editPost(post._id, editingPost.content)}
+                  onClick={() => handleEditPost(post._id, editingPost.content)}
                   className="text-primary-foreground hover:bg-primary/90 bg-primary"
                 >
                   Save
@@ -125,7 +204,7 @@ export default function PostItem({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => toggleLike(post._id)}
+              onClick={() => handleToggleLike(post._id)}
               className={isLikedByCurrentUser ? "text-red-500" : ""}
             >
               <Heart
@@ -134,12 +213,17 @@ export default function PostItem({
               />
               <span className="sr-only">Like</span>
             </Button>
+
             {post.likes.length >= 0 && (
               <span className="text-sm text-muted-foreground">
                 {post.likes.length}
               </span>
             )}
-            <Button variant="ghost" size="icon" onClick={() => onViewReplies(post._id)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onViewReplies(post._id)}
+            >
               <MessageCircle className="h-4 w-4" />
               <span className="sr-only">Comment</span>
             </Button>

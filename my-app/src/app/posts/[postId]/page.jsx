@@ -30,14 +30,52 @@ export default function ThreadPage({ params }) {
         return <div>Post Not Found</div>;
     }
 
-    const handleEditPost = (postId, newContent) => {
-        dispatch(editPostAction({ postId, newContent }));
-        setEditingPost(null);
-    };
+    const handleEditPost = async (postId, newContent) => {
+        try {
+          const response = await fetch('/api/posts/edit', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ postId, content: newContent }), // Send postId and new content
+          });
+      
+          if (response.ok) {
+            const updatedPost = await response.json(); // Parse the JSON response
+            console.log('Post updated successfully:', updatedPost);
+            setEditingPost(null); // Close the editing UI
+            // Optionally, update your local state or Redux store here
+          } else {
+            console.error('Failed to update post');
+          }
+        } catch (error) {
+          console.error('Error updating post:', error);
+        }
+      };
+      
+      
 
-    const handleDeletePost = (postId) => {
-        dispatch(deletePostAction(postId));
-    };
+      const handleDeletePost = async (postId) => {
+        try {
+          const response = await fetch('/api/posts/delete', {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ postId }), // Send postId in the body
+          });
+      
+          if (response.ok) {
+            console.log('Post deleted successfully');
+            // Optionally, remove the post from your local state or Redux store here
+          } else {
+            console.error('Failed to delete post');
+          }
+        } catch (error) {
+          console.error('Error deleting post:', error);
+        }
+      };
+      
 
     const handleAddReply = () => {
         if (replyContent.trim()) {
