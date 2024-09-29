@@ -109,9 +109,29 @@ export default function HomePage() {
   }, [dispatch]);
 
   const handleSubmitNewPost = async (content) => {
+    const userId = user?.id || "guest"; // Use 'guest' if user is not signed in
+  
+    if (userId === "guest") {
+      // If the user is a guest, handle the post locally (no API call)
+      const newPost = {
+        _id: ObjectId(), // Generate a temporary ID for the post
+        content,
+        authorId: "guest", // Set the authorId to 'guest'
+        parentId: null, // Assuming this is an original post
+        threadId: ObjectId(), // Generate a threadId
+        createdAt: new Date().toISOString(),
+        likes: [], // No likes initially
+      };
+  
+      // Update Redux store locally for guest
+      dispatch(addPost(newPost));
+      setNewPostDialogOpen(false);
+      console.log("Guest post added locally:", newPost);
+      return; // Skip the API call for guests
+    }
+  
+    // If the user is authenticated, send the request to the backend
     try {
-      const userId = user?.id || "guest"; // Use 'guest' if user is not signed in
-
       const response = await fetch("/api/posts/add", {
         method: "POST",
         headers: {
@@ -119,12 +139,12 @@ export default function HomePage() {
         },
         body: JSON.stringify({ content, userId }), // Include userId
       });
-
+  
       console.log("Response status:", response.status);
-
+  
       const responseText = await response.text();
       console.log("Response text:", responseText);
-
+  
       if (response.ok) {
         const newPost = JSON.parse(responseText);
         dispatch(addPost(newPost)); // Update Redux store
@@ -136,6 +156,7 @@ export default function HomePage() {
       console.error("Error adding post:", error);
     }
   };
+  
 
   const handleEditPost = (postId, newContent) => {
     dispatch(editPost({ postId, newContent })); // Dispatch action to update the post

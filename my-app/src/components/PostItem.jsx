@@ -1,14 +1,7 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Heart,
-  MessageCircle,
-  Send,
-  MoreHorizontal,
-  Trash,
-  Edit,
-} from "lucide-react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
 import {
   DropdownMenu,
@@ -33,10 +26,9 @@ export default function PostItem({
   const replies = posts.filter((p) => p.parentId === post._id);
   const user = users[post.authorId];
 
-  const { user, isSignedIn } = useUser(); // From Clerk
-  const isGuest = !isSignedIn; // If not signed in, treat as a guest
+  const { user: currentUser } = useUser(); // Get current user from Clerk
+  const isGuest = !currentUser; // Check if user is a guest
   
-
   const getTotalReplies = (postId) => {
     const directReplies = posts.filter((p) => p.parentId === postId);
     return directReplies.reduce(
@@ -46,11 +38,20 @@ export default function PostItem({
   };
 
   const totalReplies = getTotalReplies(post._id);
-  const currentUserId = currentUser?.id || "tester"; // Default to "tester" if no user ID found
+  const currentUserId = currentUser?.id || "guest"; // Default to "guest" if no user ID found
   const isLikedByCurrentUser = post.likes.includes(currentUserId);
-  const isAuthor = currentUserId === (post.authorId || "tester");
+  const isAuthor = currentUserId === (post.authorId || "guest");
 
+  // Handle Editing the Post
   const handleEditPost = async (postId, newContent) => {
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      editPost(postId, newContent);
+      setEditingPost(null);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
     try {
       const response = await fetch("/api/posts/edit", {
         method: "PUT",
@@ -63,9 +64,7 @@ export default function PostItem({
       if (response.ok) {
         const updatedPost = await response.json();
         setEditingPost(null);
-
-        // Update the Redux store
-        editPost(postId, newContent); // Call the prop function to update the post in the store
+        editPost(postId, newContent); // Update the Redux store
       } else {
         console.error("Failed to update post:", await response.text());
       }
@@ -74,7 +73,15 @@ export default function PostItem({
     }
   };
 
+  // Handle Deleting the Post
   const handleDeletePost = async (postId) => {
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      deletePost(postId);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
     try {
       const response = await fetch("/api/posts/delete", {
         method: "DELETE",
@@ -85,8 +92,7 @@ export default function PostItem({
       });
 
       if (response.ok) {
-        // Update the Redux store
-        deletePost(postId); // Call the prop function to remove the post from the store
+        deletePost(postId); // Update the Redux store
       } else {
         console.error("Failed to delete post:", await response.text());
       }
@@ -95,9 +101,17 @@ export default function PostItem({
     }
   };
 
+  // Handle Liking the Post
   const handleToggleLike = async (postId) => {
     const userId = currentUserId; // Use the current user ID
 
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      toggleLike(postId, userId);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
     try {
       const response = await fetch("/api/posts/like", {
         method: "PUT",
@@ -108,9 +122,7 @@ export default function PostItem({
       });
 
       if (response.ok) {
-        const updatedPost = await response.json();
-        // Update the Redux store
-        toggleLike(postId, userId);
+        toggleLike(postId, userId); // Update the Redux store
       } else {
         console.error("Failed to toggle like:", await response.text());
       }
