@@ -17,8 +17,8 @@ const postsSlice = createSlice({
       state.push(action.payload);
     },
     // Add a reply to a post
-    addReply(state, action) {
-      state.push(action.payload); // Add the reply to the posts list
+    addReply: (state, action) => {
+      state.push(action.payload);
     },
     // Update the content of a post
     updatePost(state, action) {
