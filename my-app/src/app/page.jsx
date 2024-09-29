@@ -59,11 +59,31 @@ const initialPosts = [
 ];
 
 const initialUsers = {
-  [ObjectId("user1")]: { username: "peterg", name: "Peter Griffin" },
-  [ObjectId("user2")]: { username: "stewie0921", name: "Stewie" },
-  [ObjectId("user3")]: { username: "cbrown", name: "Clevland Brown" },
-  [ObjectId("user4")]: { username: "BrianG", name: "Brian G." },
-  [ObjectId("user5")]: { username: "bn", name: "Ben N" }
+  [ObjectId("user1")]: {
+    username: "peterg",
+    name: "Peter Griffin",
+    profilePicture: "https://via.placeholder.com/150?text=PG",
+  },
+  [ObjectId("user2")]: {
+    username: "stewie0921",
+    name: "Stewie",
+    profilePicture: "https://via.placeholder.com/150?text=S",
+  },
+  [ObjectId("user3")]: {
+    username: "cbrown",
+    name: "Cleveland Brown",
+    profilePicture: "https://via.placeholder.com/150?text=CB",
+  },
+  [ObjectId("user4")]: {
+    username: "BrianG",
+    name: "Brian G.",
+    profilePicture: "https://via.placeholder.com/150?text=BG",
+  },
+  [ObjectId("user5")]: {
+    username: "bn",
+    name: "Ben N",
+    profilePicture: "https://via.placeholder.com/150?text=BN",
+  },
 };
 
 export default function HomePage() {
@@ -82,19 +102,35 @@ export default function HomePage() {
     dispatch(setUsers(initialUsers));
   }, [dispatch]);
 
-  const handleSubmitNewPost = content => {
-    const newPost = {
-      _id: String(posts.length + 1),
-      authorId: user?.id || "tester", // Use Clerk's user ID or "guest" if not signed in
-      content,
-      createdAt: new Date().toISOString(),
-      threadId: String(posts.length + 1),
-      parentId: null,
-      likes: [],
-    };
-    dispatch(addPost(newPost));
-    setNewPostDialogOpen(false);
+  const handleSubmitNewPost = async (content) => {
+    try {
+      const userId = user?.id || 'guest'; // Use 'guest' if user is not signed in
+
+      const response = await fetch('/api/posts/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content, userId }), // Include userId
+      });
+
+      console.log('Response status:', response.status);
+
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      if (response.ok) {
+        const newPost = JSON.parse(responseText);
+        dispatch(addPost(newPost)); // Update Redux store
+        setNewPostDialogOpen(false);
+      } else {
+        console.error('Failed to add post:', responseText);
+      }
+    } catch (error) {
+      console.error('Error adding post:', error);
+    }
   };
+  
 
   const handleEditPost = (postId, newContent) => {
     dispatch(editPost({ postId, newContent }));
