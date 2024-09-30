@@ -180,12 +180,13 @@ export default function PostItem({
   };
 
   return (
+    
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
       <div className="flex items-start space-x-4">
         <Avatar>
-          {(user && user.profilePicture) || currentUser?.profileImageUrl ? (
+          {(user && user.profilePicture) || currentUser?.imageUrl ? (
             <AvatarImage
-              src={user?.profilePicture || currentUser?.profileImageUrl}
+              src={user?.profilePicture || currentUser?.imageUrl}
               alt={user?.name || currentUser?.fullName || "Guest"}
             />
           ) : (
