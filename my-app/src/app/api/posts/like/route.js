@@ -3,40 +3,67 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import Post from '@/models/Post';
+import mongoose from 'mongoose';
 
 export async function PUT(request) {
-  await connectToDatabase();
-
   try {
+    await connectToDatabase();
+
     const { postId, userId } = await request.json();
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!postId || !userId) {
+      return NextResponse.json(
+        { error: 'postId and userId are required' },
+        { status: 400 }
+      );
     }
 
-    const post = await Post.findById(postId);
+    console.log('Received postId:', postId);
+    console.log('Received userId:', userId);
 
+    // Validate postId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return NextResponse.json(
+        { error: 'Invalid postId format' },
+        { status: 400 }
+      );
+    }
+
+    // Check if the user already liked the post
+    const post = await Post.findById(postId);
     if (!post) {
+      console.error('Post not found');
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    // Check if the user has already liked the post
-    const likeIndex = post.likes.indexOf(userId);
+    const hasLiked = post.likes.includes(userId);
 
-    if (likeIndex === -1) {
-      // User has not liked the post yet, add the userId to likes
-      post.likes.push(userId);
+    // Toggle like using atomic operators
+    let updatedPost;
+    if (hasLiked) {
+      // Unlike: Remove userId from likes array
+      updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        { $pull: { likes: userId } },
+        { new: true }
+      );
     } else {
-      // User has already liked the post, remove the userId from likes
-      post.likes.splice(likeIndex, 1);
+      // Like: Add userId to likes array if not already present
+      updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        { $addToSet: { likes: userId } },
+        { new: true }
+      );
     }
 
-    await post.save();
+    console.log('Updated post likes:', updatedPost.likes);
 
-    // Return the updated post
-    return NextResponse.json(post);
+    return NextResponse.json({ message: 'Like toggled successfully' });
   } catch (error) {
     console.error('Error toggling like:', error);
-    return NextResponse.json({ error: 'Failed to toggle like' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to toggle like' },
+      { status: 500 }
+    );
   }
 }

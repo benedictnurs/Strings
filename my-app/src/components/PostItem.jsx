@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  MoreHorizontal,
+  Trash,
+  Edit,
+} from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
 import {
   DropdownMenu,
@@ -10,10 +17,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@clerk/clerk-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function PostItem({
   post,
   posts,
+  comment,
   onViewReplies,
   users,
   isReply = false,
@@ -28,7 +46,7 @@ export default function PostItem({
 
   const { user: currentUser } = useUser(); // Get current user from Clerk
   const isGuest = !currentUser; // Check if user is a guest
-  
+
   const getTotalReplies = (postId) => {
     const directReplies = posts.filter((p) => p.parentId === postId);
     return directReplies.reduce(
@@ -36,11 +54,41 @@ export default function PostItem({
       directReplies.length
     );
   };
+  // Sharing Logic
+  const [shareDialogOpen, setShareDialogOpen] = useState(false); // State for dialog visibility
+  const [shareUrl, setShareUrl] = useState(""); // State for the copied share URL
 
   const totalReplies = getTotalReplies(post._id);
   const currentUserId = currentUser?.id || "guest"; // Default to "guest" if no user ID found
   const isLikedByCurrentUser = post.likes.includes(currentUserId);
   const isAuthor = currentUserId === (post.authorId || "guest");
+  // Get the original post (thread) if the current post is a reply
+  const getOriginalPostId = () => {
+    if (isReply && post.threadId) {
+      return post.threadId; // Use the threadId for replies
+    }
+    return post._id; // Otherwise, use the post's own id
+  };
+
+  // Copy post link to clipboard and open dialog
+  const handleShare = () => {
+    const origin = window.location.origin;
+    const postIdToShare = getOriginalPostId();
+    const shareLink = `${origin}/posts/${postIdToShare}`;
+
+    // Copy the URL to the clipboard
+    navigator.clipboard
+      .writeText(shareLink)
+      .then(() => {
+        setShareUrl(shareLink); // Set the copied URL for the dialog
+        setShareDialogOpen(true); // Open the dialog
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+        setShareUrl(""); // Set an empty URL if copying failed
+        setShareDialogOpen(true); // Still open the dialog for failure feedback
+      });
+  };
 
   // Handle Editing the Post
   const handleEditPost = async (postId, newContent) => {
@@ -234,12 +282,13 @@ export default function PostItem({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => onViewReplies(post._id)}
+              onClick={() => comment(post._id)}
             >
               <MessageCircle className="h-4 w-4" />
               <span className="sr-only">Comment</span>
             </Button>
-            <Button variant="ghost" size="icon">
+            {/* Share button with link copying */}
+            <Button variant="ghost" size="icon" onClick={handleShare}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Share</span>
             </Button>
@@ -253,6 +302,35 @@ export default function PostItem({
               {totalReplies} {totalReplies === 1 ? "reply" : "replies"}
             </Button>
           )}
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share String</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                {shareUrl
+                  ? "Link copied to clipboard!"
+                  : "Failed to copy the link."}
+              </p>
+              {shareUrl && (
+                <div className="mt-2 p-2 bg-zinc-950 rounded-md">
+                  <Input
+                    value={shareUrl}
+                    readOnly
+                    onClick={(e) => e.target.select()}
+                  />
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  onClick={() => setShareDialogOpen(false)}
+                  className="text-primary-foreground hover:bg-primary/90 bg-primary"
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

@@ -1,36 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   addReply as addReplyAction,
   deletePost as deletePostAction,
   editPost as editPostAction,
-  toggleLike as toggleLikeAction,
+  toggleLike,
   setPosts,
-} from '@/lib/features/posts/postsSlice';
-import { setUsers } from '@/lib/features/users/usersSlice';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
-import PostItem from '@/components/PostItem';
-import Header from '@/components/Header';
-import { useUser } from '@clerk/clerk-react';
+} from "@/lib/features/posts/postsSlice";
+import { setUsers } from "@/lib/features/users/usersSlice";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import PostItem from "@/components/PostItem";
+import Header from "@/components/Header";
+import { useUser } from "@clerk/clerk-react";
+import { useRouter } from "next/navigation";
 
 export default function ThreadPage({ params }) {
   const { postId } = params;
   const posts = useSelector((state) => state.posts);
   const users = useSelector((state) => state.users);
   const dispatch = useDispatch();
+  const router = useRouter();
   const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [replyContent, setReplyContent] = useState('');
+  const [newPostContent, setNewPostContent] = useState("");
+  const [replyContent, setReplyContent] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
 
   // Get the current user using Clerk
   const { user } = useUser();
-  const currentUserId = user?.id || 'guest'; // Use 'guest' if not signed in
+  const currentUserId = user?.id || "guest"; // Use 'guest' if not signed in
   const isGuest = !user; // Determine if the user is a guest
 
   // Include current user in users if not present
@@ -39,9 +41,9 @@ export default function ThreadPage({ params }) {
       const updatedUsers = {
         ...users,
         [currentUserId]: {
-          username: user?.username || 'guest',
-          name: user?.fullName || 'Guest User',
-          profilePicture: user?.profileImageUrl || '',
+          username: user?.username || "guest",
+          name: user?.fullName || "Guest User",
+          profilePicture: user?.profileImageUrl || "",
         },
       };
       dispatch(setUsers(updatedUsers));
@@ -52,27 +54,47 @@ export default function ThreadPage({ params }) {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch('/api/posts'); // Adjust the endpoint as needed
+        const response = await fetch("/api/posts/fetch"); // Adjust the endpoint as needed
         if (response.ok) {
           const allPosts = await response.json();
           dispatch(setPosts(allPosts)); // Replace the posts array
         } else {
-          console.error('Failed to fetch posts:', await response.text());
+          console.error("Failed to fetch posts:", await response.text());
         }
       } catch (error) {
-        console.error('Error fetching posts:', error);
+        console.error("Error fetching posts:", error);
       }
     };
 
     if (posts.length === 0) {
       fetchPosts();
     }
-  }, [dispatch]);
+  }, [dispatch, posts.length]);
 
+  // Find the root post
   const rootPost = posts.find((post) => post._id === postId);
 
+  // Handle Replies
+  const handleViewReplies = (postId) => {
+    router.push(`/posts/${postId}`);
+  };
+
   if (!rootPost) {
-    return <div>Post Not Found</div>;
+    return (
+      <div className="h-screen overflow-hidden">
+        <Header />
+        <div className="flex justify-center items-center h-screen">
+          {/*           <Button
+            onClick={() => router.push("/")}
+            className="text-primary-foreground hover:bg-primary/90 bg-primary"
+          >
+            Return to Home
+          </Button> */}
+
+          <h1 className="text-6xl">Loading...</h1>
+        </div>
+      </div>
+    );
   }
 
   // Handle editing a post
@@ -83,10 +105,10 @@ export default function ThreadPage({ params }) {
       setEditingPost(null);
     } else {
       try {
-        const response = await fetch('/api/posts/edit', {
-          method: 'PUT',
+        const response = await fetch("/api/posts/edit", {
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ postId, content: newContent }),
         });
@@ -96,10 +118,10 @@ export default function ThreadPage({ params }) {
           // Update the Redux store with the updated post
           dispatch(editPostAction({ postId, newContent }));
         } else {
-          console.error('Failed to update post:', await response.text());
+          console.error("Failed to update post:", await response.text());
         }
       } catch (error) {
-        console.error('Error updating post:', error);
+        console.error("Error updating post:", error);
       }
     }
   };
@@ -111,58 +133,63 @@ export default function ThreadPage({ params }) {
       dispatch(deletePostAction(postId));
     } else {
       try {
-        const response = await fetch('/api/posts/delete', {
-          method: 'DELETE',
+        const response = await fetch("/api/posts/delete", {
+          method: "DELETE",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ postId }),
         });
         dispatch(deletePostAction(postId));
-
         if (response.ok) {
           // Update the Redux store
           dispatch(deletePostAction(postId));
+          // Optionally redirect to home if root post is deleted
+          if (postId === rootPost._id) {
+            router.push("/");
+          }
         } else {
-          console.error('Deleted post:', await response.text());
+          console.error("Failed to delete post:", await response.text());
         }
       } catch (error) {
-        console.error('Error deleting post:', error);
+        console.error("Error deleting post:", error);
       }
     }
   };
 
-  // Handle adding a reply
   const handleAddReply = async () => {
     if (replyContent.trim()) {
+      // Use the original post's threadId for all replies
+      const originalThreadId = rootPost.threadId || rootPost._id;
+
       if (isGuest) {
         // Handle reply locally
         const newReply = {
-          _id: String(Date.now()), // Generate a unique ID
+          _id: String(Date.now()), // Temporary unique ID for guests
           content: replyContent,
-          authorId: 'guest',
-          parentId: replyingTo || postId,
-          threadId: rootPost.threadId,
+          authorId: "guest",
+          parentId: replyingTo || rootPost._id,
+          threadId: originalThreadId, // Use original post's threadId
           createdAt: new Date().toISOString(),
           likes: [],
         };
         dispatch(addReplyAction(newReply));
-        setReplyContent('');
+        setReplyContent("");
         setReplyingTo(null);
       } else {
         // Proceed with API call
         const replyData = {
           content: replyContent,
           userId: currentUserId,
-          parentId: replyingTo || postId,
-          threadId: rootPost.threadId,
+          parentId: replyingTo || rootPost._id,
+          threadId: originalThreadId, // Use original post's threadId
         };
 
         try {
-          const response = await fetch('/api/posts/add', {
-            method: 'POST',
+          const response = await fetch("/api/posts/add", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify(replyData),
           });
@@ -170,47 +197,28 @@ export default function ThreadPage({ params }) {
           if (response.ok) {
             const newReply = await response.json();
             dispatch(addReplyAction(newReply)); // Update the Redux store
-            setReplyContent(''); // Clear the input
+            setReplyContent(""); // Clear the input
             setReplyingTo(null); // Reset replyingTo
           } else {
-            console.error('Failed to add reply:', await response.text());
+            const errorData = await response.json();
+            alert(`Failed to add reply: ${errorData.error}`);
+            console.error("Failed to add reply:", await response.text());
           }
         } catch (error) {
-          console.error('Error adding reply:', error);
+          alert("An unexpected error occurred while adding the reply.");
+          console.error("Error adding reply:", error);
         }
       }
     }
   };
 
-  // Handle toggling like
-  const handleToggleLike = async (postId) => {
-    const userId = currentUserId;
+  // Handle Liking the Post
 
-    if (isGuest) {
-      // Handle toggle like locally
-      dispatch(toggleLikeAction({ postId, userId }));
-    } else {
-      try {
-        const response = await fetch('/api/posts/like', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ postId, userId }),
-        });
-
-        if (response.ok) {
-          // Update the Redux store
-          dispatch(toggleLikeAction({ postId, userId }));
-        } else {
-          console.error('Failed to toggle like:', await response.text());
-        }
-      } catch (error) {
-        console.error('Error toggling like:', error);
-      }
-    }
+  const handleToggleLike = (postId, userId) => {
+    dispatch(toggleLike({ postId, userId }));
   };
 
+  // Handle Replying the Post
   const handleRootPostClick = () => {
     setReplyingTo(null);
   };
@@ -220,50 +228,47 @@ export default function ThreadPage({ params }) {
     if (users[authorId]) {
       return users[authorId].username;
     } else if (authorId === currentUserId) {
-      return user?.username || 'Guest';
+      return user?.username || "Guest";
     } else {
-      return 'Unknown User';
+      return "Unknown User";
     }
   };
 
-  // Render replies recursively with separate vertical lines for root replies
-  const renderReplies = (parentId, isNested = false) => {
+  // Render replies recursively
+  const renderReplies = (parentId) => {
     const replies = posts.filter((post) => post.parentId === parentId);
     if (replies.length === 0) return null;
 
-    return replies.map((reply) => {
-      const isReplyToRoot = reply.parentId === rootPost._id;
-      return (
-        <div key={reply._id} className="relative mt-4">
-          {/* Vertical line */}
-          <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
-
-          <div className="relative">
-            <PostItem
-              post={reply}
-              posts={posts}
-              onViewReplies={() => setReplyingTo(reply._id)}
-              users={users}
-              deletePost={handleDeletePost}
-              editPost={handleEditPost}
-              setEditingPost={setEditingPost}
-              editingPost={editingPost}
-              isReply
-              toggleLike={handleToggleLike}
-              currentUserId={currentUserId}
-            />
-            {/* Render nested replies */}
-            {renderReplies(reply._id, true)}
-          </div>
+    return replies.map((reply) => (
+      <div key={reply._id} className="relative mt-4">
+        {/* Vertical line centered under the profile picture */}
+        <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+        <div className="flex-1">
+          <PostItem
+            post={reply}
+            posts={posts}
+            comment={() => setReplyingTo(reply._id)}
+            onViewReplies={handleViewReplies}
+            users={users}
+            deletePost={handleDeletePost}
+            editPost={handleEditPost}
+            setEditingPost={setEditingPost}
+            editingPost={editingPost}
+            isReply
+            toggleLike={handleToggleLike}
+            currentUserId={currentUserId}
+          />
+          {/* Render nested replies */}
+          {renderReplies(reply._id)}
         </div>
-      );
-    });
+      </div>
+    ));
   };
 
   const replyingToPost = posts.find((post) => post._id === replyingTo);
   const replyingToUsername = replyingToPost
     ? getUsernameById(replyingToPost.authorId)
-    : '';
+    : "";
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -282,18 +287,19 @@ export default function ThreadPage({ params }) {
           <PostItem
             post={rootPost}
             posts={posts}
+            comment={handleRootPostClick}
             onViewReplies={handleRootPostClick}
             users={users}
             deletePost={handleDeletePost}
             editPost={handleEditPost}
             setEditingPost={setEditingPost}
+            editingPost={editingPost}
             toggleLike={handleToggleLike}
-            currentUserId={currentUserId}
+            currentUserId={currentUserId} // Ensure this is present
           />
+
           {/* Render replies to the root post */}
-          <div className="relative">
-            {renderReplies(rootPost._id)}
-          </div>
+          <div className="relative mt-4">{renderReplies(rootPost._id)}</div>
         </div>
       </main>
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -302,8 +308,8 @@ export default function ThreadPage({ params }) {
             className="flex-1"
             placeholder={
               replyingTo
-                ? `Replying to @${replyingToUsername}`
-                : 'Add a reply...'
+                ? `Stringing to @${replyingToUsername}`
+                : "Add a string..."
             }
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}

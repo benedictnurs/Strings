@@ -1,14 +1,14 @@
 // models/Post.js
-
 import mongoose from 'mongoose';
 
 const PostSchema = new mongoose.Schema({
-  content: { type: String, required: true },
-  authorId: { type: String, required: true }, // Store Clerk user ID as a string
-  parentId: { type: String, default: null },
-  threadId: { type: String, default: null },
+  content: String,
+  authorId: String,
+  parentId: String,
+  threadId: String,
   createdAt: { type: Date, default: Date.now },
-  likes: [{ type: String }], // List of user IDs who liked the post
+  likes: [String],
 });
 
+// Export the model if it exists, or create it
 export default mongoose.models.Post || mongoose.model('Post', PostSchema);

@@ -9,88 +9,10 @@ import {
   editPost,
   toggleLike,
 } from "../lib/features/posts/postsSlice";
-import { setUsers } from "../lib/features/users/usersSlice";
 import Header from "@/components/Header";
 import PostItem from "@/components/PostItem";
-import { ObjectId } from "@/utils/objectId";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/clerk-react"; // Import the useUser hook from Clerk
-
-const initialPosts = [
-  {
-    _id: ObjectId("1"),
-    content: "Wowah this thing works!",
-    authorId: ObjectId("user1"),
-    parentId: null,
-    threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:00:00Z",
-    likes: [],
-  },
-  {
-    _id: ObjectId("2"),
-    content: "Wow amazing.",
-    authorId: ObjectId("user2"),
-    parentId: ObjectId("1"),
-    threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:05:00Z",
-    likes: [],
-  },
-  {
-    _id: ObjectId("3"),
-    content: "Shut up.",
-    authorId: ObjectId("user3"),
-    parentId: ObjectId("2"),
-    threadId: ObjectId("1"),
-    createdAt: "2024-08-28T00:10:00Z",
-    likes: [],
-  },
-  {
-    _id: ObjectId("4"),
-    content: "Urmmmm hello.",
-    authorId: ObjectId("user4"),
-    parentId: null,
-    threadId: ObjectId("4"),
-    createdAt: "2024-08-28T01:00:00Z",
-    likes: ["user1"],
-  },
-  {
-    _id: ObjectId("5"),
-    content: "TO-DO add Login, add Database and add USERS!!!.",
-    authorId: ObjectId("user5"),
-    parentId: null,
-    threadId: ObjectId("5"),
-    createdAt: "2024-08-29T01:00:00Z",
-    likes: ["user1", "user2", "user3"],
-  },
-];
-
-const initialUsers = {
-  [ObjectId("user1")]: {
-    username: "peterg",
-    name: "Peter Griffin",
-    profilePicture: "https://via.placeholder.com/150?text=PG",
-  },
-  [ObjectId("user2")]: {
-    username: "stewie0921",
-    name: "Stewie",
-    profilePicture: "https://via.placeholder.com/150?text=S",
-  },
-  [ObjectId("user3")]: {
-    username: "cbrown",
-    name: "Cleveland Brown",
-    profilePicture: "https://via.placeholder.com/150?text=CB",
-  },
-  [ObjectId("user4")]: {
-    username: "BrianG",
-    name: "Brian G.",
-    profilePicture: "https://via.placeholder.com/150?text=BG",
-  },
-  [ObjectId("user5")]: {
-    username: "bn",
-    name: "Ben N",
-    profilePicture: "https://via.placeholder.com/150?text=BN",
-  },
-};
 
 export default function HomePage() {
   const dispatch = useDispatch();
@@ -101,35 +23,49 @@ export default function HomePage() {
   const [newPostContent, setNewPostContent] = useState("");
   const [editingPost, setEditingPost] = useState(null);
 
-  const { user, isSignedIn } = useUser(); // Get user data from Clerk
+  const { user } = useUser(); // Get user data from Clerk
 
   useEffect(() => {
-    dispatch(setPosts(initialPosts));
-    dispatch(setUsers(initialUsers));
+    // Fetch posts from the backend API
+    const fetchPosts = async () => {
+      try {
+        const response = await fetch("/api/posts/fetch");
+        if (response.ok) {
+          const data = await response.json();
+          dispatch(setPosts(data));
+        } else {
+          console.error("Failed to fetch posts:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      }
+    };
+
+    fetchPosts();
   }, [dispatch]);
 
   const handleSubmitNewPost = async (content) => {
     const userId = user?.id || "guest"; // Use 'guest' if user is not signed in
-  
+
     if (userId === "guest") {
       // If the user is a guest, handle the post locally (no API call)
       const newPost = {
-        _id: ObjectId(), // Generate a temporary ID for the post
+        _id: String(Date.now()), // Generate a temporary ID for the post
         content,
         authorId: "guest", // Set the authorId to 'guest'
         parentId: null, // Assuming this is an original post
-        threadId: ObjectId(), // Generate a threadId
+        threadId: String(Date.now()), // Generate a threadId
         createdAt: new Date().toISOString(),
         likes: [], // No likes initially
       };
-  
+
       // Update Redux store locally for guest
       dispatch(addPost(newPost));
       setNewPostDialogOpen(false);
       console.log("Guest post added locally:", newPost);
       return; // Skip the API call for guests
     }
-  
+
     // If the user is authenticated, send the request to the backend
     try {
       const response = await fetch("/api/posts/add", {
@@ -139,38 +75,31 @@ export default function HomePage() {
         },
         body: JSON.stringify({ content, userId }), // Include userId
       });
-  
-      console.log("Response status:", response.status);
-  
-      const responseText = await response.text();
-      console.log("Response text:", responseText);
-  
+
       if (response.ok) {
-        const newPost = JSON.parse(responseText);
+        const newPost = await response.json();
         dispatch(addPost(newPost)); // Update Redux store
         setNewPostDialogOpen(false);
       } else {
-        console.error("Failed to add post:", responseText);
+        console.error("Failed to add post:", await response.text());
       }
     } catch (error) {
       console.error("Error adding post:", error);
     }
   };
-  
 
   const handleEditPost = (postId, newContent) => {
     dispatch(editPost({ postId, newContent })); // Dispatch action to update the post
   };
-  
+
   const handleDeletePost = (postId) => {
     dispatch(deletePost(postId)); // Dispatch action to remove the post
   };
-  
 
   const handleToggleLike = (postId, userId) => {
     dispatch(toggleLike({ postId, userId }));
   };
-  
+
   const handleViewReplies = (postId) => {
     router.push(`/posts/${postId}`);
   };
@@ -194,15 +123,17 @@ export default function HomePage() {
                 key={post._id}
                 post={post}
                 posts={posts}
+                comment={handleViewReplies}
                 onViewReplies={handleViewReplies}
                 users={users}
                 isReply={false}
-                deletePost={handleDeletePost} // Pass the function that updates the store
-                editPost={handleEditPost} // Pass the function that updates the store
+                deletePost={handleDeletePost}
+                editPost={handleEditPost}
                 setEditingPost={setEditingPost}
                 editingPost={editingPost}
                 toggleLike={handleToggleLike}
                 currentUserId={user?.id || "guest"}
+                isMainPage={true} // Pass isMainPage as true
               />
             ))}
         </div>
