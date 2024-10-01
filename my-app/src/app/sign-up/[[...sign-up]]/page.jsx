@@ -126,7 +126,7 @@ export default function SignUpPage() {
                 </SignUp.Step>
 
                 <SignUp.Step name="continue">
-                  <Card className="w-full sm:w-96">
+                  <Card className="w-full sm:w-96 rounded-none">
                     <CardHeader>
                       <CardTitle>Continue registration</CardTitle>
                     </CardHeader>

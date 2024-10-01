@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,11 +20,9 @@ import { useUser } from "@clerk/clerk-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
@@ -41,8 +39,7 @@ export default function PostItem({
   editingPost,
   toggleLike,
 }) {
-  const replies = posts.filter((p) => p.parentId === post._id);
-  const user = users[post.authorId];
+  const user = users[post.authorId] || {}; // Safely access the user object
 
   const { user: currentUser } = useUser(); // Get current user from Clerk
   const isGuest = !currentUser; // Check if user is a guest
@@ -54,6 +51,7 @@ export default function PostItem({
       directReplies.length
     );
   };
+
   // Sharing Logic
   const [shareDialogOpen, setShareDialogOpen] = useState(false); // State for dialog visibility
   const [shareUrl, setShareUrl] = useState(""); // State for the copied share URL
@@ -62,6 +60,7 @@ export default function PostItem({
   const currentUserId = currentUser?.id || "guest"; // Default to "guest" if no user ID found
   const isLikedByCurrentUser = post.likes.includes(currentUserId);
   const isAuthor = currentUserId === (post.authorId || "guest");
+
   // Get the original post (thread) if the current post is a reply
   const getOriginalPostId = () => {
     if (isReply && post.threadId) {
@@ -180,27 +179,24 @@ export default function PostItem({
   };
 
   return (
-    
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
       <div className="flex items-start space-x-4">
         <Avatar>
-          {(user && user.profilePicture) || currentUser?.imageUrl ? (
+          {user.profilePicture || currentUser?.imageUrl ? (
             <AvatarImage
-              src={user?.profilePicture || currentUser?.imageUrl}
-              alt={user?.name || currentUser?.fullName || "Guest"}
+              src={user.profilePicture || currentUser?.imageUrl}
+              alt={user.fullName || currentUser?.fullName || "Guest"}
             />
           ) : (
             <AvatarFallback>
-              {(user
-                ? user.username.slice(0, 2).toUpperCase()
-                : currentUser?.username?.slice(0, 2).toUpperCase()) || "NA"}
+              {(user.username?.slice(0, 2).toUpperCase()) || (currentUser?.username?.slice(0, 2).toUpperCase()) || "NA"}
             </AvatarFallback>
           )}
         </Avatar>
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium leading-none">
-              {user?.name || currentUser?.fullName || "Guest"}
+              {user.fullName || currentUser?.fullName || "Guest"}
             </p>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-muted-foreground">
@@ -220,9 +216,7 @@ export default function PostItem({
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeletePost(post._id)}
-                      >
+                      <DropdownMenuItem onClick={() => handleDeletePost(post._id)}>
                         <Trash className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -233,9 +227,7 @@ export default function PostItem({
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {user
-              ? `@${user.username.toLowerCase()}`
-              : `@${currentUser?.username || "Guest"}`}
+            @{user.username ? user.username.toLowerCase() : "guest"}
           </p>
           {editingPost && editingPost._id === post._id ? (
             <div className="space-y-2">
