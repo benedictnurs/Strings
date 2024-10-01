@@ -1,3 +1,5 @@
+// src/components/PostItem.jsx
+
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
 
 export default function PostItem({
   post,
@@ -38,6 +41,7 @@ export default function PostItem({
   setEditingPost,
   editingPost,
   toggleLike,
+  currentUserId,
 }) {
   const user = users[post.authorId] || {}; // Safely access the user object
 
@@ -57,7 +61,6 @@ export default function PostItem({
   const [shareUrl, setShareUrl] = useState(""); // State for the copied share URL
 
   const totalReplies = getTotalReplies(post._id);
-  const currentUserId = currentUser?.id || "guest"; // Default to "guest" if no user ID found
   const isLikedByCurrentUser = post.likes.includes(currentUserId);
   const isAuthor = currentUserId === (post.authorId || "guest");
 
@@ -149,33 +152,8 @@ export default function PostItem({
   };
 
   // Handle Liking the Post
-  const handleToggleLike = async (postId) => {
-    const userId = currentUserId; // Use the current user ID
-
-    if (isGuest) {
-      // For guests, only update locally (Redux store)
-      toggleLike(postId, userId);
-      return; // Skip API call
-    }
-
-    // For authenticated users, send request to the server
-    try {
-      const response = await fetch("/api/posts/like", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ postId, userId }),
-      });
-
-      if (response.ok) {
-        toggleLike(postId, userId); // Update the Redux store
-      } else {
-        console.error("Failed to toggle like:", await response.text());
-      }
-    } catch (error) {
-      console.error("Error toggling like:", error);
-    }
+  const handleToggleLike = async (postId, userId) => {
+    toggleLike(postId, userId);
   };
 
   return (
@@ -187,18 +165,27 @@ export default function PostItem({
               src={user.profilePicture || currentUser?.imageUrl}
               alt={user.fullName || currentUser?.fullName || "Guest"}
             />
-          ) : (
+          ) : user.username ? (
             <AvatarFallback>
-              {(user.username?.slice(0, 2).toUpperCase()) || (currentUser?.username?.slice(0, 2).toUpperCase()) || "NA"}
+              {user.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
+          ) : (
+            <Skeleton className="h-10 w-10 rounded-full" /> // Skeleton for avatar
           )}
         </Avatar>
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium leading-none">
-              {user.fullName || currentUser?.fullName || "Guest"}
-            </p>
+            {/* Full Name with Skeleton */}
+            {user.fullName ? (
+              <p className="text-sm font-medium leading-none">
+                {user.fullName || "Guest"}
+              </p>
+            ) : (
+              <Skeleton className="h-4 w-32" />
+            )}
+
             <div className="flex items-center space-x-2">
+              {/* Relative Time */}
               <p className="text-sm text-muted-foreground">
                 {getRelativeTime(post.createdAt)}
               </p>
@@ -226,9 +213,17 @@ export default function PostItem({
               </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            @{user.username ? user.username.toLowerCase() : "guest"}
-          </p>
+
+          {/* Username with Skeleton */}
+          {user.username ? (
+            <p className="text-sm text-muted-foreground">
+              @{user.username.toLowerCase()}
+            </p>
+          ) : (
+            <Skeleton className="h-4 w-24" />
+          )}
+
+          {/* Post Content or Editing Interface */}
           {editingPost && editingPost._id === post._id ? (
             <div className="space-y-2">
               <textarea
@@ -253,11 +248,13 @@ export default function PostItem({
           ) : (
             <p className="text-sm">{post.content}</p>
           )}
+
+          {/* Interaction Buttons */}
           <div className="flex items-center space-x-3 pt-2">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleToggleLike(post._id)}
+              onClick={() => handleToggleLike(post._id, currentUserId)}
               className={isLikedByCurrentUser ? "text-red-500" : ""}
             >
               <Heart
@@ -286,6 +283,8 @@ export default function PostItem({
               <span className="sr-only">Share</span>
             </Button>
           </div>
+
+          {/* Replies Button */}
           {totalReplies > 0 && (
             <Button
               variant="link"
@@ -295,6 +294,8 @@ export default function PostItem({
               {totalReplies} {totalReplies === 1 ? "reply" : "replies"}
             </Button>
           )}
+
+          {/* Share Dialog */}
           <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
             <DialogContent>
               <DialogHeader>

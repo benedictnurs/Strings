@@ -42,7 +42,7 @@ export default function ThreadPage({ params }) {
         ...users,
         [currentUserId]: {
           username: user?.username || "guest",
-          name: user?.fullName || "Guest User",
+          fullName: user?.fullName || "Guest User",
           profilePicture: user?.profileImageUrl || "",
         },
       };
@@ -52,22 +52,60 @@ export default function ThreadPage({ params }) {
 
   // Fetch all posts and set them in the Redux store (if not already fetched)
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchPostsAndUsers = async () => {
       try {
-        const response = await fetch("/api/posts/fetch"); // Adjust the endpoint as needed
-        if (response.ok) {
-          const allPosts = await response.json();
-          dispatch(setPosts(allPosts)); // Replace the posts array
-        } else {
-          console.error("Failed to fetch posts:", await response.text());
+        // 1. Fetch posts from the backend API
+        const postsResponse = await fetch("/api/posts/fetch");
+        if (!postsResponse.ok) {
+          console.error("Failed to fetch posts:", postsResponse.statusText);
+          return;
         }
+        const postsData = await postsResponse.json();
+        dispatch(setPosts(postsData));
+
+        // 2. Extract unique authorIds from posts
+        const uniqueAuthorIds = [
+          ...new Set(postsData.map((post) => post.authorId)),
+        ];
+        if (uniqueAuthorIds.length === 0) {
+          console.log("No authors found in posts.");
+          return;
+        }
+
+        // 3. Fetch user data for these authorIds via the batch API
+        const usersResponse = await fetch("/api/users/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authorIds: uniqueAuthorIds }),
+        });
+        if (!usersResponse.ok) {
+          console.error("Failed to fetch users:", usersResponse.statusText);
+          return;
+        }
+        const usersData = await usersResponse.json();
+
+        // 4. Validate that usersData is an array
+        if (!Array.isArray(usersData)) {
+          console.error("Expected an array of users, received:", usersData);
+          return;
+        }
+
+        // 5. Reduce the array to a map of users by authorId
+        const usersByAuthorId = usersData.reduce((acc, user) => {
+          acc[user.authorId] = user;
+          return acc;
+        }, {});
+
+        // 6. Dispatch the users to the Redux store
+        dispatch(setUsers(usersByAuthorId));
       } catch (error) {
-        console.error("Error fetching posts:", error);
+        console.error("Error fetching posts and users:", error);
       }
     };
 
+    // Fetch posts and users if posts are not already loaded
     if (posts.length === 0) {
-      fetchPosts();
+      fetchPostsAndUsers();
     }
   }, [dispatch, posts.length]);
 
@@ -84,13 +122,12 @@ export default function ThreadPage({ params }) {
       <div className="h-screen overflow-hidden">
         <Header />
         <div className="flex justify-center items-center h-screen">
-          {/*           <Button
+          {/* <Button
             onClick={() => router.push("/")}
             className="text-primary-foreground hover:bg-primary/90 bg-primary"
           >
             Return to Home
           </Button> */}
-
           <h1 className="text-6xl">Loading...</h1>
         </div>
       </div>
@@ -140,7 +177,7 @@ export default function ThreadPage({ params }) {
           },
           body: JSON.stringify({ postId }),
         });
-        dispatch(deletePostAction(postId));
+
         if (response.ok) {
           // Update the Redux store
           dispatch(deletePostAction(postId));
@@ -157,6 +194,7 @@ export default function ThreadPage({ params }) {
     }
   };
 
+  // Handle adding a reply
   const handleAddReply = async () => {
     if (replyContent.trim()) {
       // Use the original post's threadId for all replies
@@ -213,14 +251,13 @@ export default function ThreadPage({ params }) {
   };
 
   // Handle Liking the Post
-
   const handleToggleLike = (postId, userId) => {
     dispatch(toggleLike({ postId, userId }));
   };
 
-  // Handle Replying the Post
-  const handleRootPostClick = () => {
-    setReplyingTo(null);
+  // Handle Replying to a Specific Post
+  const handleReplyClick = (postId) => {
+    setReplyingTo(postId);
   };
 
   // Function to get username by authorId
@@ -247,7 +284,7 @@ export default function ThreadPage({ params }) {
           <PostItem
             post={reply}
             posts={posts}
-            comment={() => setReplyingTo(reply._id)}
+            comment={() => handleReplyClick(reply._id)}
             onViewReplies={handleViewReplies}
             users={users}
             deletePost={handleDeletePost}
@@ -287,29 +324,31 @@ export default function ThreadPage({ params }) {
           <PostItem
             post={rootPost}
             posts={posts}
-            comment={handleRootPostClick}
-            onViewReplies={handleRootPostClick}
+            comment={handleReplyClick}
+            onViewReplies={handleViewReplies}
             users={users}
             deletePost={handleDeletePost}
             editPost={handleEditPost}
             setEditingPost={setEditingPost}
             editingPost={editingPost}
             toggleLike={handleToggleLike}
-            currentUserId={currentUserId} // Ensure this is present
+            currentUserId={currentUserId}
           />
 
           {/* Render replies to the root post */}
           <div className="relative mt-4">{renderReplies(rootPost._id)}</div>
         </div>
       </main>
+
+      {/* Reply Input Section */}
       <div className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex items-center space-x-2 py-2">
           <Input
             className="flex-1"
             placeholder={
               replyingTo
-                ? `Stringing to @${replyingToUsername}`
-                : "Add a string..."
+                ? `Replying to @${replyingToUsername}`
+                : "Add a reply..."
             }
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
