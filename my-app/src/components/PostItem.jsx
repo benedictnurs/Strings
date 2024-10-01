@@ -187,8 +187,8 @@ export default function PostItem({
         <Avatar>
           {user.profilePicture || currentUser?.imageUrl ? (
             <AvatarImage
-              src={user.profilePicture || currentUser?.imageUrl}
-              alt={user.fullName || currentUser?.fullName || "Guest"}
+              src={user.profilePicture}
+              alt={user.fullName || "Guest"}
             />
           ) : user.username ? (
             <AvatarFallback>
