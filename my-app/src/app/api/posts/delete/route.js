@@ -38,3 +38,4 @@ async function deletePostAndReplies(postId) {
     await deletePostAndReplies(reply._id);
   }
 }
+export const revalidate = 0;

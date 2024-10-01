@@ -40,3 +40,4 @@ export async function POST(request) {
     );
   }
 }
+export const revalidate = 0;

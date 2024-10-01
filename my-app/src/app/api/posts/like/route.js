@@ -67,3 +67,4 @@ export async function PUT(request) {
     );
   }
 }
+export const revalidate = 0;

@@ -136,3 +136,4 @@ async function handleUserDeleted(data) {
     console.warn(`User not found for deletion: ${id}`);
   }
 }
+export const revalidate = 0;

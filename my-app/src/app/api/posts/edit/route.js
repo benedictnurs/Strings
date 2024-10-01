@@ -28,3 +28,4 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Failed to update post' }, { status: 500 });
   }
 }
+export const revalidate = 0;

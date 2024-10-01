@@ -18,3 +18,4 @@ export async function GET(request) {
     );
   }
 }
+export const revalidate = 0;
