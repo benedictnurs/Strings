@@ -152,10 +152,35 @@ export default function PostItem({
   };
 
   // Handle Liking the Post
-  const handleToggleLike = async (postId, userId) => {
-    toggleLike(postId, userId);
-  };
+  const handleToggleLike = async (postId) => {
+    const userId = currentUserId; // Use the current user ID
 
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      toggleLike(postId, userId);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
+    try {
+      const response = await fetch("/api/posts/like", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId, userId }),
+      });
+
+      if (response.ok) {
+        toggleLike(postId, userId); // Update the Redux store
+      } else {
+        console.error("Failed to toggle like:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+  
   return (
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
       <div className="flex items-start space-x-4">
