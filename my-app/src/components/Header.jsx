@@ -80,8 +80,9 @@ export default function Header({
                                         </DialogContent>
                                     </Dialog>
                                 )}
+                                {/* {`/user/${user.id}`} */}
                                 {isSignedIn && user && (
-                                    <Link href={`/user/${user.id}`}>
+                                    <Link href="/user-profile">
                                         <Button variant="ghost" size="icon">
                                             <User className="h-5 w-5" />
                                             <span className="sr-only">Profile</span>
