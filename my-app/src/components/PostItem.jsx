@@ -182,7 +182,7 @@ export default function PostItem({
   };
   
   return (
-    <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
+    <div className={`mb-8 ${!isReply && "border-b pb-8"}`} >
       <div className="flex items-start space-x-4">
         <Avatar>
           {user.profilePicture || currentUser?.imageUrl ? (

@@ -17,6 +17,7 @@ import PostItem from "@/components/PostItem";
 import Header from "@/components/Header";
 import { useUser } from "@clerk/clerk-react";
 import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton for loading states
 
 export default function ThreadPage({ params }) {
   const { postId } = params;
@@ -122,6 +123,7 @@ export default function ThreadPage({ params }) {
       <div className="h-screen overflow-hidden">
         <Header />
         <div className="flex justify-center items-center h-screen">
+          {/* Optionally, add a button to return to home */}
           {/* <Button
             onClick={() => router.push("/")}
             className="text-primary-foreground hover:bg-primary/90 bg-primary"
@@ -260,6 +262,11 @@ export default function ThreadPage({ params }) {
     setReplyingTo(postId);
   };
 
+  // Handle Replying the Post (for the root post)
+  const handleRootPostClick = () => {
+    setReplyingTo(null); // Set to null when replying to the root post
+  };
+
   // Function to get username by authorId
   const getUsernameById = (authorId) => {
     if (users[authorId]) {
@@ -284,7 +291,7 @@ export default function ThreadPage({ params }) {
           <PostItem
             post={reply}
             posts={posts}
-            comment={() => handleReplyClick(reply._id)}
+            comment={() => handleReplyClick(reply._id)} // Set replyingTo to nested reply's ID
             onViewReplies={handleViewReplies}
             users={users}
             deletePost={handleDeletePost}
@@ -324,8 +331,8 @@ export default function ThreadPage({ params }) {
           <PostItem
             post={rootPost}
             posts={posts}
-            comment={handleReplyClick}
-            onViewReplies={handleViewReplies}
+            comment={handleRootPostClick} // Updated to handleRootPostClick (sets replyingTo to null)
+            onViewReplies={handleRootPostClick}
             users={users}
             deletePost={handleDeletePost}
             editPost={handleEditPost}
