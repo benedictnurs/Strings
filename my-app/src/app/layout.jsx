@@ -8,7 +8,7 @@ import {
   SignedOut,
   UserButton
 } from '@clerk/nextjs'
-
+export const fetchCache = 'force-no-store';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
