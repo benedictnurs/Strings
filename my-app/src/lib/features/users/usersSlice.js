@@ -1,23 +1,29 @@
+// src/lib/features/users/usersSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const usersSlice = createSlice({
   name: 'users',
-  initialState: [],
+  initialState: {}, // Change initial state from array to object
   reducers: {
     setUsers(state, action) {
-      return action.payload;
+      // Assuming action.payload is an object keyed by authorId
+      return { ...state, ...action.payload };
     },
     addUser(state, action) {
-      state.push(action.payload);
+      const user = action.payload;
+      state[user.authorId] = user;
     },
     updateUser(state, action) {
-      const index = state.findIndex(user => user._id === action.payload._id);
-      if (index >= 0) {
-        state[index] = action.payload;
+      const user = action.payload;
+      if (state[user.authorId]) {
+        state[user.authorId] = user;
       }
     },
     deleteUser(state, action) {
-      return state.filter(user => user._id !== action.payload);
+      const authorId = action.payload;
+      if (state[authorId]) {
+        delete state[authorId];
+      }
     },
   },
 });

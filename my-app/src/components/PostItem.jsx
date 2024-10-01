@@ -1,7 +1,14 @@
-import { useState, useEffect } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Repeat2, Send, MoreHorizontal, Trash, Edit } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  MoreHorizontal,
+  Trash,
+  Edit,
+} from "lucide-react";
 import { getRelativeTime } from "@/utils/getRelativeTime";
 import {
   DropdownMenu,
@@ -9,10 +16,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUser } from "@clerk/clerk-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function PostItem({
   post,
   posts,
+  comment,
   onViewReplies,
   users,
   isReply = false,
@@ -21,48 +38,172 @@ export default function PostItem({
   setEditingPost,
   editingPost,
   toggleLike,
-  currentUserId, // Add this prop
 }) {
-  const replies = posts.filter(p => p.parentId === post._id);
-  const user = users[post.authorId];
+  const user = users[post.authorId] || {}; // Safely access the user object
 
-  // Debugging logs
-  useEffect(() => {
-    console.log("Post:", post);
-    console.log("All Posts:", posts);
-    console.log("Replies:", replies);
-  }, [post, posts]);
+  const { user: currentUser } = useUser(); // Get current user from Clerk
+  const isGuest = !currentUser; // Check if user is a guest
 
-  const getTotalReplies = postId => {
-    const directReplies = posts.filter(p => p.parentId === postId);
+  const getTotalReplies = (postId) => {
+    const directReplies = posts.filter((p) => p.parentId === postId);
     return directReplies.reduce(
       (total, reply) => total + getTotalReplies(reply._id),
       directReplies.length
     );
   };
 
+  // Sharing Logic
+  const [shareDialogOpen, setShareDialogOpen] = useState(false); // State for dialog visibility
+  const [shareUrl, setShareUrl] = useState(""); // State for the copied share URL
+
   const totalReplies = getTotalReplies(post._id);
-  const isLikedByCurrentUser = post.likes.includes(currentUserId); // Check if post is liked by the current user
+  const currentUserId = currentUser?.id || "guest"; // Default to "guest" if no user ID found
+  const isLikedByCurrentUser = post.likes.includes(currentUserId);
+  const isAuthor = currentUserId === (post.authorId || "guest");
+
+  // Get the original post (thread) if the current post is a reply
+  const getOriginalPostId = () => {
+    if (isReply && post.threadId) {
+      return post.threadId; // Use the threadId for replies
+    }
+    return post._id; // Otherwise, use the post's own id
+  };
+
+  // Copy post link to clipboard and open dialog
+  const handleShare = () => {
+    const origin = window.location.origin;
+    const postIdToShare = getOriginalPostId();
+    const shareLink = `${origin}/posts/${postIdToShare}`;
+
+    // Copy the URL to the clipboard
+    navigator.clipboard
+      .writeText(shareLink)
+      .then(() => {
+        setShareUrl(shareLink); // Set the copied URL for the dialog
+        setShareDialogOpen(true); // Open the dialog
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+        setShareUrl(""); // Set an empty URL if copying failed
+        setShareDialogOpen(true); // Still open the dialog for failure feedback
+      });
+  };
+
+  // Handle Editing the Post
+  const handleEditPost = async (postId, newContent) => {
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      editPost(postId, newContent);
+      setEditingPost(null);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
+    try {
+      const response = await fetch("/api/posts/edit", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId, content: newContent }),
+      });
+
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setEditingPost(null);
+        editPost(postId, newContent); // Update the Redux store
+      } else {
+        console.error("Failed to update post:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error updating post:", error);
+    }
+  };
+
+  // Handle Deleting the Post
+  const handleDeletePost = async (postId) => {
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      deletePost(postId);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
+    try {
+      const response = await fetch("/api/posts/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId }),
+      });
+
+      if (response.ok) {
+        deletePost(postId); // Update the Redux store
+      } else {
+        console.error("Failed to delete post:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
+
+  // Handle Liking the Post
+  const handleToggleLike = async (postId) => {
+    const userId = currentUserId; // Use the current user ID
+
+    if (isGuest) {
+      // For guests, only update locally (Redux store)
+      toggleLike(postId, userId);
+      return; // Skip API call
+    }
+
+    // For authenticated users, send request to the server
+    try {
+      const response = await fetch("/api/posts/like", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId, userId }),
+      });
+
+      if (response.ok) {
+        toggleLike(postId, userId); // Update the Redux store
+      } else {
+        console.error("Failed to toggle like:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
 
   return (
     <div className={`mb-8 ${!isReply && "border-b pb-8"}`}>
       <div className="flex items-start space-x-4">
         <Avatar>
-          <AvatarFallback>
-            {user ? user.username.slice(0, 2).toUpperCase() : "NA"}
-          </AvatarFallback>
+          {user.profilePicture || currentUser?.imageUrl ? (
+            <AvatarImage
+              src={user.profilePicture || currentUser?.imageUrl}
+              alt={user.fullName || currentUser?.fullName || "Guest"}
+            />
+          ) : (
+            <AvatarFallback>
+              {(user.username?.slice(0, 2).toUpperCase()) || (currentUser?.username?.slice(0, 2).toUpperCase()) || "NA"}
+            </AvatarFallback>
+          )}
         </Avatar>
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium leading-none">
-              {user ? user.name : "Test User"}
+              {user.fullName || currentUser?.fullName || "Guest"}
             </p>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-muted-foreground">
                 {getRelativeTime(post.createdAt)}
               </p>
               <div className="flex items-center space-x-2">
-                {post.authorId === "tester" && (
+                {isAuthor && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -75,7 +216,7 @@ export default function PostItem({
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => deletePost(post._id)}>
+                      <DropdownMenuItem onClick={() => handleDeletePost(post._id)}>
                         <Trash className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -86,44 +227,61 @@ export default function PostItem({
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {user ? `@${user.username.toLowerCase()}` : "@tester"}
+            @{user.username ? user.username.toLowerCase() : "guest"}
           </p>
           {editingPost && editingPost._id === post._id ? (
             <div className="space-y-2">
               <textarea
                 value={editingPost.content}
-                onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                onChange={(e) =>
+                  setEditingPost({ ...editingPost, content: e.target.value })
+                }
                 className="mt-2 min-h-[100px] w-full border p-2 bg-zinc-950"
               />
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setEditingPost(null)}>Cancel</Button>
-                <Button onClick={() => editPost(post._id, editingPost.content)} className="text-primary-foreground hover:bg-primary/90 bg-primary">Save</Button>
+                <Button variant="outline" onClick={() => setEditingPost(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleEditPost(post._id, editingPost.content)}
+                  className="text-primary-foreground hover:bg-primary/90 bg-primary"
+                >
+                  Save
+                </Button>
               </div>
             </div>
           ) : (
             <p className="text-sm">{post.content}</p>
           )}
           <div className="flex items-center space-x-3 pt-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => toggleLike(post._id)}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleToggleLike(post._id)}
               className={isLikedByCurrentUser ? "text-red-500" : ""}
             >
-              <Heart 
-                className="h-4 w-4" 
-                fill={isLikedByCurrentUser ? "currentColor" : "none"} 
+              <Heart
+                className="h-4 w-4"
+                fill={isLikedByCurrentUser ? "currentColor" : "none"}
               />
               <span className="sr-only">Like</span>
             </Button>
+
             {post.likes.length >= 0 && (
-              <span className="text-sm text-muted-foreground">{post.likes.length}</span>
+              <span className="text-sm text-muted-foreground">
+                {post.likes.length}
+              </span>
             )}
-            <Button variant="ghost" size="icon" onClick={() => onViewReplies(post._id)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => comment(post._id)}
+            >
               <MessageCircle className="h-4 w-4" />
               <span className="sr-only">Comment</span>
             </Button>
-            <Button variant="ghost" size="icon">
+            {/* Share button with link copying */}
+            <Button variant="ghost" size="icon" onClick={handleShare}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Share</span>
             </Button>
@@ -137,6 +295,35 @@ export default function PostItem({
               {totalReplies} {totalReplies === 1 ? "reply" : "replies"}
             </Button>
           )}
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share String</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                {shareUrl
+                  ? "Link copied to clipboard!"
+                  : "Failed to copy the link."}
+              </p>
+              {shareUrl && (
+                <div className="mt-2 p-2 bg-zinc-950 rounded-md">
+                  <Input
+                    value={shareUrl}
+                    readOnly
+                    onClick={(e) => e.target.select()}
+                  />
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  onClick={() => setShareDialogOpen(false)}
+                  className="text-primary-foreground hover:bg-primary/90 bg-primary"
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

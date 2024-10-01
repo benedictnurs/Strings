@@ -17,8 +17,8 @@ const postsSlice = createSlice({
       state.push(action.payload);
     },
     // Add a reply to a post
-    addReply(state, action) {
-      state.push(action.payload); // Add the reply to the posts list
+    addReply: (state, action) => {
+      state.push(action.payload);
     },
     // Update the content of a post
     updatePost(state, action) {
@@ -29,30 +29,31 @@ const postsSlice = createSlice({
       }
     },
     // Edit the content of a post
-    editPost(state, action) {
+    editPost: (state, action) => {
       const { postId, newContent } = action.payload;
-      const post = state.find(post => post._id === postId);
+      const post = state.find((p) => p._id === postId);
       if (post) {
         post.content = newContent;
       }
     },
-    // Delete a post by its ID
-    deletePost(state, action) {
-      return state.filter(post => post._id !== action.payload);
+    deletePost: (state, action) => {
+      const postId = action.payload;
+      return state.filter((post) => post._id !== postId);
     },
     // Toggle the like status of a post
-    toggleLike(state, action) {
-      const postId = action.payload;
-      const post = state.find(post => post._id === postId);
+    toggleLike: (state, action) => {
+      const { postId, userId } = action.payload;
+      const post = state.find((p) => p._id === postId);
       if (post) {
-        const userIndex = post.likes.indexOf("tester"); // Replace "tester" with the actual current user ID
-        if (userIndex >= 0) {
-          // If the user has already liked the post, unlike it
-          post.likes.splice(userIndex, 1);
+        const likeIndex = post.likes.indexOf(userId);
+        if (likeIndex === -1) {
+          // Add userId to likes
+          post.likes.push(userId);
         } else {
-          // If the user has not liked the post, like it
-          post.likes.push("tester"); // Replace "tester" with the actual current user ID
+          // Remove userId from likes
+          post.likes.splice(likeIndex, 1);
         }
+
       }
     },
   },
